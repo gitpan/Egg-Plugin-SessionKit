@@ -1,0 +1,21 @@
+Build.PL
+Changes
+lib/Egg/Plugin/SessionKit.pm
+lib/Egg/Plugin/SessionKit/Base/DBI.pm
+lib/Egg/Plugin/SessionKit/Base/DBIC.pm
+lib/Egg/Plugin/SessionKit/Base/FileCache.pm
+lib/Egg/Plugin/SessionKit/Bind/Cookie.pm
+lib/Egg/Plugin/SessionKit/Issue/MD5.pm
+lib/Egg/Plugin/SessionKit/Issue/UniqueID.pm
+lib/Egg/Plugin/SessionKit/Store/Base64.pm
+lib/Egg/Plugin/SessionKit/Store/Plain.pm
+lib/Egg/Plugin/SessionKit/TieHash.pm
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README
+t/00_use.t
+t/01_session.t
+t/02_store_base64.t
+t/88_perlcritic.t
+t/89_pod.t

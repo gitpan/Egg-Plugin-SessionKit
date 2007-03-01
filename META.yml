@@ -1,0 +1,20 @@
+abstract: Session plugin for Egg.
+author: Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
+build_requires: 
+  Test::More: 0
+  Test::Pod: 0
+distribution_type: module
+generated_by: Module::Install version 0.64
+license: perl
+name: Egg-Plugin-SessionKit
+no_index: 
+  directory: 
+    - inc
+    - t
+requires: 
+  CGI: 3
+  Cache::Cache: 1.05
+  Digest::MD5: 2.3
+  Egg::Release: 1.09
+  MIME::Base64: 3
+version: 0.06
