@@ -3,13 +3,13 @@ package Egg::Plugin::SessionKit;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SessionKit.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: SessionKit.pm 275 2007-03-03 10:52:45Z lushe $
 #
 use strict;
 use warnings;
 use UNIVERSAL::require;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 *sss= \&session;
 
@@ -224,13 +224,15 @@ sub output_session_id {
 }
 sub close {
 	my($ss)= @_;
-	if ($ss->update_ok && ! $ss->rollback) {
+	if ($ss->e && $ss->update_ok && ! $ss->rollback) {
 		if ($ss->new_entry) {
-			$ss->e->debug_out("# + session insert: ". $ss->session_id);
+			$ss->e->debug_out
+			  ("# + session insert: ". $ss->session_id) if $ss->e;
 			$ss->insert;
 			$ss->output_session_id;
 		} else {
-			$ss->e->debug_out("# + session update: ". $ss->session_id);
+			$ss->e->debug_out
+			  ("# + session update: ". $ss->session_id) if $ss->e;
 			$ss->update;
 		}
 		$ss->commit_ok(1);
