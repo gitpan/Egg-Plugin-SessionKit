@@ -3,14 +3,14 @@ package Egg::Plugin::SessionKit::Base::FileCache;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: FileCache.pm 264 2007-03-01 13:11:39Z lushe $
+# $Id: FileCache.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use warnings;
 use Cache::FileCache;
 use base qw/Class::Accessor::Fast/;
 
-our $VERSION= '0.04';
+our $VERSION= '0.05';
 
 __PACKAGE__->mk_accessors( qw/cache/ );
 
@@ -76,6 +76,14 @@ mind by Clear and Purge of Cache::FileCache.
 As for the setting of plugin_session->{base}, Cache::FileCache is passed as it is. 
 
 Please see the document of Cache::FileCache of the setting in detail.
+
+=over 4
+
+=item insert, restore, startup, update,
+
+These methods are called from the base module.
+
+=back
 
 =head1 SEE ALSO
 

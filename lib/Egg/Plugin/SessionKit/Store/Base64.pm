@@ -3,7 +3,7 @@ package Egg::Plugin::SessionKit::Store::Base64;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base64.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: Base64.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use Storable qw(nfreeze thaw);
@@ -37,6 +37,14 @@ Configuration.
   plugin_session=> {
     store=> { name=> 'Base64' },
     },
+
+=over 4
+
+=item store_decode, store_encode,
+
+These methods are called from the base module.
+
+=back
 
 =head1 SEE ALSO
 

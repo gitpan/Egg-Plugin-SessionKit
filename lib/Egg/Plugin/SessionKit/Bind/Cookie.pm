@@ -3,7 +3,7 @@ package Egg::Plugin::SessionKit::Bind::Cookie;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Cookie.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: Cookie.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 
@@ -60,6 +60,14 @@ Configuration.
       cookie_secure=> 1,
       },
     },
+
+=over 4
+
+=item get_bind_data, set_bind_data, startup,
+
+These methods are called from the base module.
+
+=back
 
 =head1 CONFIGURATION
 

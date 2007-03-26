@@ -3,12 +3,12 @@ package Egg::Plugin::SessionKit::Base::DBIC;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBIC.pm 265 2007-03-01 13:12:09Z lushe $
+# $Id: DBIC.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my @context_fields=
 qw{ _schema_name _model_name id_field data_field access_field };
@@ -122,6 +122,14 @@ Please build in and use Egg::Plugin::DBIC::Transaction.
 
 * AutoCommit が有効でも E::P::DBIC::Transaction を使用して下さい。
   E::P::DBIC::Transaction は AutoCommit の状態に応じた動作をします。
+
+=over 4
+
+=item close, commit_ok, insert, restore, startup, update, model,
+
+These methods are called from the base module.
+
+=back
 
 =head1 CONFIGURATION
 

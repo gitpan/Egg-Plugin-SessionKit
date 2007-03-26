@@ -3,7 +3,7 @@ package Egg::Plugin::SessionKit::Issue::UniqueID;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: UniqueID.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: UniqueID.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 
@@ -34,6 +34,14 @@ Configuration.
       name=> 'UniqueID',
       },
     },
+
+=over 4
+
+=item issue_id, issue_check_id,
+
+These methods are called from the base module.
+
+=back
 
 =head1 DESCRIPTION
 

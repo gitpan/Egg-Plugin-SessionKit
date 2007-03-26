@@ -3,7 +3,7 @@ package Egg::Plugin::SessionKit::Issue::MD5;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: MD5.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: MD5.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use Digest::MD5;
@@ -45,6 +45,14 @@ Configuration.
       name=> 'MD5',
       },
     },
+
+=over 4
+
+=item startup, issue_id, issue_check_id,
+
+These methods are called from the base module.
+
+=back
 
 =head1 SEE ALSO
 

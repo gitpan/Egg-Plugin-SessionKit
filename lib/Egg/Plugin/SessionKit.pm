@@ -3,13 +3,13 @@ package Egg::Plugin::SessionKit;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SessionKit.pm 275 2007-03-03 10:52:45Z lushe $
+# $Id: SessionKit.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use warnings;
 use UNIVERSAL::require;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 *sss= \&session;
 
@@ -444,6 +444,15 @@ When [TICKET_ID] is omitted, the value is picked up from $e->request->param.
   } else {
     print "Processing is completed.";
   }
+
+=head2 finalize
+
+It is a method that calls from Egg::Engine. It commits it if necessary.
+
+=head2 setup
+
+It is a method for the start preparation that is called from the controller of 
+the project. * Do not call it from the application.
 
 =head1 SEE ALSO
 

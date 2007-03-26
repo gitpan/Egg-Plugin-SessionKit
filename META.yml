@@ -17,4 +17,4 @@ requires:
   Digest::MD5: 2.3
   Egg::Release: 1.09
   MIME::Base64: 3
-version: 0.07
+version: 0.08

@@ -3,13 +3,13 @@ package Egg::Plugin::SessionKit::Base::DBI;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBI.pm 265 2007-03-01 13:12:09Z lushe $
+# $Id: DBI.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use warnings;
 use base qw/Class::Accessor::Fast/;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 __PACKAGE__->mk_accessors( qw/dbh/ );
 
@@ -111,6 +111,14 @@ DBI::CommitOK must be evaluated from SessionKit later when you describe the plug
 
 When close is done, the transaction doesn't do $e->commit_ok if it is effective
  and $e->rollback_ok true.
+
+=over 4
+
+=item close, commit_ok, insert, restore, startup, update,
+
+These methods are called from the base module.
+
+=back
 
 =head1 CONFIGURATION
 

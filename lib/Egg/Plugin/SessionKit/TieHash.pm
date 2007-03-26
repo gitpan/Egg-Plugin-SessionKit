@@ -3,12 +3,12 @@ package Egg::Plugin::SessionKit::TieHash;
 # Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: TieHash.pm 266 2007-03-01 13:14:01Z lushe $
+# $Id: TieHash.pm 69 2007-03-26 02:15:26Z lushe $
 #
 use strict;
 use base qw/Class::Accessor::Fast/;
 
-our $VERSION= 0.01;
+our $VERSION= 0.02;
 
 __PACKAGE__->mk_accessors( qw/e config new_entry update_ok rollback/ );
 
@@ -97,6 +97,16 @@ If some changes are done as the value is substituted, 'update_ok' becomes ture.
   
   # When the value is put, it is ture.
   tied(%{$e->session})->update_ok > 0;
+
+=head1 METHODS
+
+=over 4
+
+=item startup
+
+The place today is a method of the dummy. Nothing is done.
+
+=back
 
 =head1 SEE ALSO
 
