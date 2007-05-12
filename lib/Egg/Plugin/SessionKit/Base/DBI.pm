@@ -1,98 +1,42 @@
 package Egg::Plugin::SessionKit::Base::DBI;
 #
-# Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBI.pm 69 2007-03-26 02:15:26Z lushe $
+# $Id: DBI.pm 136 2007-05-12 12:49:36Z lushe $
 #
-use strict;
-use warnings;
-use base qw/Class::Accessor::Fast/;
-
-our $VERSION = '0.04';
-
-__PACKAGE__->mk_accessors( qw/dbh/ );
-
-sub startup {
-	my($class, $e, $conf)= @_;
-	$e->isa('Egg::Plugin::DBI::CommitOK')
-	  || Egg::Error->throw(q/Please build in Egg::Plugin::DBI::CommitOK./);
-	$conf->{base}{dbname} ||= 'sessions';
-	$conf->{base}{data_field_name} ||= 'session';
-	$class->next::method($e, $conf);
-}
-sub TIEHASH {
-	my($ss, $e, $conf)= @_;
-	$ss= bless {}, $ss unless ref($ss);
-	$ss->dbh($e->dbh);
-	$ss->{dbname}= $conf->{base}{dbname};
-	$ss->{data_field}= $conf->{base}{data_field_name};
-	$ss->next::method($e, $conf);
-}
-sub restore {
-	my $ss= shift;
-	my $id= shift || return 0;
-	my $sesson;
-	my $sth= $ss->dbh->prepare
-	  (qq{ SELECT $ss->{data_field} FROM $ss->{dbname} WHERE id = ? });
-	$sth->execute($id);
-	$sth->bind_columns(\$sesson);
-	$sth->fetch; $sth->finish;
-	$sesson ? $ss->store_decode(\$sesson): 0;
-}
-sub insert {
-	my($ss)= @_;
-	my $sth= $ss->dbh->prepare
-	  (qq{ INSERT INTO $ss->{dbname} (id, $ss->{data_field}) VALUES (?, ?) });
-	$sth->execute($ss->session_id, $ss->store_encode($ss->{params}));
-	$sth->finish;
-	$ss;
-}
-sub update {
-	my($ss)= @_;
-	my $sth= $ss->dbh->prepare
-	  (qq{ UPDATE $ss->{dbname} SET $ss->{data_field} = ? WHERE id = ? });
-	$sth->execute($ss->store_encode($ss->{params}), $ss->session_id);
-	$sth->finish;
-	$ss;
-}
-sub commit_ok {
-	shift->e->commit_ok(@_);
-}
-sub close {
-	my($ss)= @_;
-	$ss->rollback(1) if $ss->e->rollback_ok;
-	$ss->next::method;
-}
-
-1;
-
-__END__
 
 =head1 NAME
 
-Egg::Plugin::SessionKit::Base::DBI - DBI module for SessonKit plugin.
+Egg::Plugin::SessionKit::DBI - Egg::Model::DBI for session.
 
 =head1 SYNOPSIS
 
-  use Egg qw/SessionKit DBI::CommitOK/;
-
-Configuration.
-
-  plugin_session=> {
-    base=> {
-      name            => 'DBI',
-      dbname          => 'sesson_data',
-      data_field_name => 'a_session',
+  use Egg qw/ SessionKit DBI::Transaction /;
+  
+  __PACKAGE__->mk_eggstartup(
+    .......
+    ...
+    MODEL => [ [ DBI => { ... } ] ],
+    
+    plugin_session => {
+      base => {
+        name       => 'DBI',
+        dbname     => 'sessions',
+        data_field => 'a_session',
+        time_field => 'lastmod',
+        },
+      .......
+      ...
       },
-    store=> { name=> 'Base64' },
-    },
+    );
 
 =head1 DESCRIPTION
 
-The data base steering wheel being offered by Egg::Plugin::DBI::CommitOK is used.
+The session by L<Egg::Model::DBI> is supported.
 
-Please prepare the table for the following sessions.
+It is necessary to load L<Egg::Plugin::DBI::Transaction>.
+
+Please make the table for the following sessions for the data base used.
 
   CREATE TABLE sessions (
     id        char(32)   primary key,
@@ -100,53 +44,145 @@ Please prepare the table for the following sessions.
     a_session text
     );
 
-It might be good for the value of lastmod to set and to renew the trigger.
+* It is not forgotten to set an appropriate authority.
 
-DBI::CommitOK must be evaluated from SessionKit later when you describe the plugin in Egg.
+* Please set L<Egg::Plugin::SessionKit::Store::Base64> to the Store module.
 
-  use Egg qw/
-    SessionKit
-    DBI::CommitOK
-    /;
+* The function to clear the data not used is not included.
+ Separately, it is necessary to delete it with cron etc. regularly.
 
-When close is done, the transaction doesn't do $e->commit_ok if it is effective
- and $e->rollback_ok true.
-
-=over 4
-
-=item close, commit_ok, insert, restore, startup, update,
-
-These methods are called from the base module.
-
-=back
-
-=head1 CONFIGURATION
-
-plugin_session->{base} is a setting of this module.
-
-=head2 name
-
-Please give to me as 'B<DBI>' if you use this module.
+=head1 CONFIGRATION
 
 =head2 dbname
 
-Please specify the table of the session.
+Name of table for session used.
 
-B<Default is 'sessions'>
+Default is 'sessions'.
 
-=head2 data_field_name
+=head2 data_field
 
-Field name where session data is preserved.
+Name of column that stores session data.
 
-B<Default is 'session'>
+Default is 'a_session'.
 
-Only place field today is customizable.
+=head2 time_field
+
+Name of column that stores updated day and hour.
+
+Default is 'lastmod'.
+
+=cut
+use strict;
+use warnings;
+use Time::Piece::MySQL;
+
+our $VERSION = '2.00';
+
+__PACKAGE__->mk_accessors(qw/ dbh dbname datafield timefield /);
+
+=head1 METHODS
+
+=head2 startup
+
+The setting is checked.
+
+=cut
+sub startup {
+	my($class, $e, $conf)= @_;
+	$e->isa('Egg::Plugin::DBI::Transaction')
+	   || die q{ Please build in Egg::Plugin::DBI::Transaction. };
+	my $base= $conf->{base} ||= {};
+	$base->{dbname}     ||= $base->{db_name} ||= 'sessions';
+	$base->{data_field} ||= 'a_session';
+	$base->{time_field} ||= 'lastmod',
+	$class->next::method($e, $conf);
+}
+
+sub TIEHASH {
+	my($ss)= shift->SUPER::TIEHASH(@_);
+	my $base= $ss->config->{base};
+	$ss->dbh($ss->e->dbh);
+	$ss->dbname($base->{dbname});
+	$ss->datafield($base->{data_field});
+	$ss->timefield($base->{time_field});
+	$ss;
+}
+
+=head2 restore ( [SESSION_ID] )
+
+The session data is acquired.
+
+=cut
+sub restore {
+	my $ss= shift;
+	my $id= shift || return 0;
+	my($dbname, $datafield)= ($ss->dbname, $ss->datafield);
+	my $sesson;
+	my $sth= $ss->dbh->prepare
+	         (qq{ SELECT $datafield FROM $dbname WHERE id = ? });
+	$sth->execute($id);
+	$sth->bind_columns(\$sesson);
+	$sth->fetch; $sth->finish;
+	$sesson ? $ss->store_decode(\$sesson): 0;
+}
+
+=head2 insert
+
+New session data is added.
+
+=cut
+sub insert {
+	my($ss)= @_;
+	my($dbname, $datafield, $timefield)=
+	  ($ss->dbname, $ss->datafield, $ss->timefield);
+	$ss->dbh->do(
+	  qq{ INSERT INTO $dbname (id, $datafield, $timefield) VALUES (?, ?, ?) },
+	  undef, $ss->session_id, $ss->store_encode($ss->{session}),
+	         localtime(time)->mysql_datetime,
+	  );
+}
+
+=head2 update
+
+Existing session data is updated.
+
+=cut
+sub update {
+	my($ss)= @_;
+	my($dbname, $datafield, $timefield)=
+	  ($ss->dbname, $ss->datafield, $ss->timefield);
+	$ss->dbh->do(
+	  qq{ UPDATE $dbname SET $datafield = ?, $timefield = ? WHERE id = ? },
+	  undef, $ss->store_encode($ss->{session}),
+	         localtime(time)->mysql_datetime, $ss->session_id,
+	  );
+}
+
+=head2 commit_ok
+
+Accessor to $e->commit_ok.
+
+=cut
+sub commit_ok {
+	shift->e->commit_ok(@_);
+}
+
+=head2 close
+
+Rollback is set if there are signs where some errors occurred before shutting
+the session.
+
+=cut
+sub close {
+	my($ss)= @_;
+	$ss->rollback(1) if $ss->e->rollback_ok;
+	$ss->next::method;
+}
 
 =head1 SEE ALSO
 
-L<Egg::Model::DBI>
-L<Egg::Plugin::DBI::CommitOK>
-L<Egg::SessionKit>,
+L<Egg::Model::DBI>,
+L<Egg::Plugin::SessionKit>,
 L<Egg::Release>,
 
 =head1 AUTHOR
@@ -162,3 +198,5 @@ it under the same terms as Perl itself, either Perl version 5.8.6 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
+
+1;

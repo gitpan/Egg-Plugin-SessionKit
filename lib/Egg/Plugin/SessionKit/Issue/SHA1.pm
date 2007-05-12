@@ -1,13 +1,13 @@
-package Egg::Plugin::SessionKit::Store::Base64;
+package Egg::Plugin::SessionKit::Issue::SHA1;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base64.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: SHA1.pm 137 2007-05-12 12:50:54Z lushe $
 #
 
 =head1 NAME
 
-Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preservation.
+Egg::Plugin::SessionKit::Issue::SHA1 - Session id is issued by Digest::SHA1.
 
 =head1 SYNOPSIS
 
@@ -16,11 +16,10 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
   __PACKAGE__->mk_eggstartup(
     .......
     ...
-    MODEL => [ [ DBI => { ... } ] ],
-    
     plugin_session => {
-      store => {
-        name       => 'Base64',
+      issue => {
+        name      => 'SHA1',
+        id_length => 32,
         },
       .......
       ...
@@ -29,44 +28,30 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
 
 =head1 DESCRIPTION
 
-The means to make the session data a text for preservation is offered.
+Session ID is issued by L<Digest::SHA1>.
 
 =cut
 use strict;
 use warnings;
-use Storable qw(nfreeze thaw);
-use MIME::Base64;
+use Digest::SHA1 qw/sha1_hex/;
 
-our $VERSION= '2.00';
+our $VERSION = '2.00';
 
 =head1 METHODS
 
-=head2 store_encode
+=head2 issue_id
 
-The session data is made a text.
-
-=cut
-sub store_encode {
-	my $ss  = shift;
-	my $data= shift || return 0;
-	encode_base64(nfreeze($data));
-}
-
-=head2 store_decode
-
-The session data made a text is restored.
+Session id is issued.
 
 =cut
-sub store_decode {
-	my $ss  = shift;
-	my $data= shift || return 0;
-	thaw(decode_base64($$data));
+sub issue_id {
+	rand(1000);
+	substr(sha1_hex(time. {}. rand(1000). $$), 0, $_[0]->id_length);
 }
 
 =head1 SEE ALSO
 
-L<Storable>,
-L<MIME::Base64>,
+L<Digest::SHA1>,
 L<Egg::Plugin::SessionKit>,
 L<Egg::Release>,
 

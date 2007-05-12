@@ -1,40 +1,50 @@
 package Egg::Plugin::SessionKit::Store::Plain;
 #
-# Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Plain.pm 69 2007-03-26 02:15:26Z lushe $
+# $Id: Plain.pm 136 2007-05-12 12:49:36Z lushe $
 #
-use strict;
-
-our $VERSION= '0.01';
-
-sub store_decode { ${$_[1]} }
-sub store_encode { $_[1] }
-
-1;
-
-__END__
 
 =head1 NAME
 
-Egg::Plugin::SessionKit::Store::Plain - When the session data is treated, nothing is done.
+Egg::Plugin::SessionKit::Store::Plain - It treats without processing the session data.
 
 =head1 SYNOPSIS
 
-Configuration.
+  use Egg qw/ SessionKit /;
+  
+  __PACKAGE__->mk_eggstartup(
+    .......
+    ...
+    
+    plugin_session => {
+      store => {
+        name       => 'Plain',
+        },
+      .......
+      ...
+      },
+    );
 
-  plugin_session=> {
-    store=> { name=> 'Plain' },
-    },
+=head1 DESCRIPTION
+
+When the session data is taken out or is preserved, it doesn't arrange one's
+verbs and objects.
 
 =over 4
 
-=item store_decode, store_encode,
-
-These methods are called from the base module.
+=item * store_encode, store_decode
 
 =back
+
+=cut
+use strict;
+use warnings;
+
+our $VERSION= '2.00';
+
+sub store_encode { $_[1] }
+sub store_decode { ${$_[1]} }
 
 =head1 SEE ALSO
 
@@ -54,3 +64,5 @@ it under the same terms as Perl itself, either Perl version 5.8.6 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
+
+1;

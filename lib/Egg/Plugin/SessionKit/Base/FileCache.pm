@@ -1,89 +1,102 @@
 package Egg::Plugin::SessionKit::Base::FileCache;
 #
-# Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: FileCache.pm 69 2007-03-26 02:15:26Z lushe $
+# $Id: FileCache.pm 136 2007-05-12 12:49:36Z lushe $
 #
+
+=head1 NAME
+
+Egg::Plugin::SessionKit::Base::FileCache - Cache::FileCache for Session.
+
+=head1 SYNOPSIS
+
+  use Egg qw/ SessionKit /;
+  
+  __PACKAGE__->mk_eggstartup(
+    .......
+    ...
+    plugin_session => {
+      base => {
+        name        => 'FileCache',
+        cache_root  => '/path/to/cache',
+        namespace   => 'sessions',
+        cache_depth => 3,
+        default_expires_in => (60* 60),
+        },
+      .......
+      ...
+      },
+    );
+
+=head1 DESCRIPTION
+
+The session by L<Cache::FileCache> is supported.
+
+=head1 CONFIGRATION
+
+The setting becomes an option to pass everything to L<Cache::FileCache>.
+
+Please refer to the document of L<Cache::FileCache>.
+
+=cut
 use strict;
 use warnings;
 use Cache::FileCache;
-use base qw/Class::Accessor::Fast/;
 
-our $VERSION= '0.05';
+our $VERSION= '2.00';
 
-__PACKAGE__->mk_accessors( qw/cache/ );
+__PACKAGE__->mk_accessors('cache');
 
-*update= \&insert;
+=head1 METHODS
 
+=head2 startup
+
+The setting is checked.
+
+=cut
 sub startup {
 	my($class, $e, $conf)= @_;
-	$conf->{base}{cache_root} ||= $e->config->{cache}
-	  || Egg::Error->throw(q/I want 'cache' dir./);
-	-w $conf->{base}{cache_root}
-	  || Egg::Error->throw(q/There is no permission in 'cache_root'./);
-	$conf->{base}{namespace} ||= 'sessions';
-	$conf->{base}{cache_depth} ||= 3;
-	$conf->{base}{default_expires_in} ||= 60* 60;
+	my $base= $conf->{base} ||= {};
+	$base->{cache_root} ||= $e->config->{dir}{cache}
+	                    || die q{ I want 'cache' dir. };
+#	-w $base->{cache_root}
+#	   || die q{ There is no permission in 'cache_root'. };
+	$base->{namespace}          ||= 'sessions';
+	$base->{cache_depth}        ||= 3;
+	$base->{default_expires_in} ||= 60* 60;
 	$class->next::method($e, $conf);
 }
+
 sub TIEHASH {
-	my($ss, $e, $conf)= @_;
-	$ss= bless {}, $ss unless ref($ss);
-	$ss->cache( Cache::FileCache->new($conf->{base}) );
-	$ss->next::method($e, $conf);
+	my($ss)= shift->SUPER::TIEHASH(@_);
+	$ss->cache( Cache::FileCache->new($ss->config->{base}) );
+	$ss;
 }
+
+=head2 restore ( [SESSION_ID] )
+
+The session data is acquired.
+
+=cut
 sub restore {
 	my $ss= shift;
 	my $id= shift || return 0;
 	my $data= $ss->cache->get($id) || return 0;
 	$data->{session_session_id} ? $data: 0;
 }
+
+=head2 insert, update
+
+The session data is preserved.
+
+=cut
 sub insert {
 	my $ss= shift;
-	$ss->cache->set($ss->session_id, $ss->{params});
+	$ss->cache->set($ss->session_id, $ss->{session});
 	$ss;
 }
-
-1;
-
-=head1 NAME
-
-Egg::Plugin::SessionKit::Base::FileCache - The session is operated by FileCache.
-
-=head1 SYNOPSIS
-
-Configuration.
-
-  plugin_session=> {
-    base=> {
-      name=> 'FileCache',
-      namespace  => 'session_space',
-      cache_root => '/path/to/chache',
-      cache_depth=> 3,
-      default_expires_in=> (30* 60),
-      ...
-      },
-    },
-
-=head1 DESCRIPTION
-
-The function to delete the preserved cash file is not provided.
-
-Please give the script that Mentes it the cash file to me separately in the business 
-mind by Clear and Purge of Cache::FileCache.
-
-As for the setting of plugin_session->{base}, Cache::FileCache is passed as it is. 
-
-Please see the document of Cache::FileCache of the setting in detail.
-
-=over 4
-
-=item insert, restore, startup, update,
-
-These methods are called from the base module.
-
-=back
+*update= \&insert;
 
 =head1 SEE ALSO
 
@@ -104,3 +117,5 @@ it under the same terms as Perl itself, either Perl version 5.8.6 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
+
+1;

@@ -1,13 +1,13 @@
-package Egg::Plugin::SessionKit::Store::Base64;
+package Egg::Plugin::SessionKit::Issue::UUID;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base64.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: UUID.pm 137 2007-05-12 12:50:54Z lushe $
 #
 
 =head1 NAME
 
-Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preservation.
+Egg::Plugin::SessionKit::Issue::UUID - Session ID is issued by Data::UUID.
 
 =head1 SYNOPSIS
 
@@ -16,11 +16,9 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
   __PACKAGE__->mk_eggstartup(
     .......
     ...
-    MODEL => [ [ DBI => { ... } ] ],
-    
     plugin_session => {
-      store => {
-        name       => 'Base64',
+      issue => {
+        name => 'UUID',
         },
       .......
       ...
@@ -29,44 +27,40 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
 
 =head1 DESCRIPTION
 
-The means to make the session data a text for preservation is offered.
+Session ID is issued by L<Data::UUID>.
 
 =cut
 use strict;
 use warnings;
-use Storable qw(nfreeze thaw);
-use MIME::Base64;
+use Data::UUID;
 
 our $VERSION= '2.00';
 
 =head1 METHODS
 
-=head2 store_encode
+=head2 issue_id
 
-The session data is made a text.
+Session id is issued.
 
 =cut
-sub store_encode {
-	my $ss  = shift;
-	my $data= shift || return 0;
-	encode_base64(nfreeze($data));
+sub issue_id {
+	Data::UUID->new->create_str();
 }
 
-=head2 store_decode
+=head2 issue_check_id ( [SESSION_ID] )
 
-The session data made a text is restored.
+Whether it is effective session ID is checked.
 
 =cut
-sub store_decode {
+sub issue_check_id {
 	my $ss  = shift;
-	my $data= shift || return 0;
-	thaw(decode_base64($$data));
+	my $id  = shift || return 0;
+	$id=~m{^[A-Fa-f0-9\-]+$} ? $id: 0;
 }
 
 =head1 SEE ALSO
 
-L<Storable>,
-L<MIME::Base64>,
+L<Data::UUID>,
 L<Egg::Plugin::SessionKit>,
 L<Egg::Release>,
 

@@ -1,51 +1,253 @@
 package Egg::Plugin::SessionKit;
 #
-# Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SessionKit.pm 69 2007-03-26 02:15:26Z lushe $
+# $Id: SessionKit.pm 136 2007-05-12 12:49:36Z lushe $
 #
+
+=head1 NAME
+
+Egg::Plugin::SessionKit - Plugin that manages session.
+
+=head1 SYNOPSIS
+
+  use Egg qw/ SessionKit /;
+  
+  __PACKAGE__->mk_eggstartup(
+    .......
+    ...
+    plugin_session => {
+      base  => 'FileCache',
+      issue => 'MD5',
+      bind  => 'Cookie',
+      store => 'Plain',
+      },
+    );
+
+  # The session data is acquired.
+  my $session = $e->session;
+  
+  $session->{hoge}= 'in data';
+  
+  # Refer to present session id.
+  tied(%$session)->session_id;
+
+=head1 DESCRIPTION
+
+It is a plugin to manage the session.
+
+=head1 CONFIGRATION
+
+It sets it to 'plugin_session' with HASH.
+
+=head2 base => [HASH]
+
+Setting passed to module that basis operates.
+
+The name since 'Egg::Plugin::SessionKit::Base' is set with the name key.
+
+  plugin_session=> {
+    base => {
+      name => 'FileCache',
+      namespace  => 'sessions',
+      cache_root => '/path/to/cache',
+      ...
+      },
+    },
+
+=head2 store => [HASH]
+
+Setting passed to module that manages preservation form of session data.
+
+The name since 'Egg::Plugin::SessionKit::Store' is set with the name key.
+
+  plugin_session=> {
+    store => {
+      name => 'Base64',
+      },
+    },
+
+=head2 bind => [HASH]
+
+Setting passed to module that offers method of passing client session id.
+
+The name since 'Egg::Plugin::SessionKit::Bind' is set with the name key.
+
+  plugin_session=> {
+    bind => {
+      name => 'Cookie',
+      cookie_name   => 'sid',
+      cookie_path   => '/',
+      cookie_secure => 1,
+      },
+    },
+
+=head2 issue => [HASH]
+
+Setting passed to module to issue session id.
+
+The name since 'Egg::Plugin::SessionKit::Issue' is set with the name key.
+
+  plugin_session=> {
+    issue => {
+      name => 'MD5',
+      id_length => 32,
+      },
+    },
+
+=head2 ticket => [HASH]
+
+Temporary setting concerning ticket id issue.
+
+=over 4
+
+=item * param_name => [PARAM_NAME]
+
+Name of the form data that handles ticket id.
+
+Default is 'ticket'.
+
+=back
+
+=head2 FORMAT
+
+The setting of 'base', 'store', 'bind', 'issue' supports the following forms.
+
+=over 4
+
+=item * SCALAR
+
+It is acceptable only to set the name directly when there is especially no 
+setting except the name.
+
+  plugin_session=> {
+    base  => 'FileCache',
+    stroe => 'Plain',
+    ...
+    },
+
+=item * ARRAY
+
+When the name key is not seen to be used easily, it is possible to do as 
+follows.
+
+  plugin_session=> {
+    base => [ DBI=> {
+      .....
+      ...
+      } ],
+    bind => [ Cookie => {
+      .....
+      ...
+      } ],
+    },
+
+=back
+
+=cut
 use strict;
 use warnings;
 use UNIVERSAL::require;
+use Digest::MD5;
 
-our $VERSION = '0.08';
+our $VERSION = '2.00';
 
+=head1 METHODS
+
+=head2 session
+
+The session data is returned.
+
+  my $session_hash = $e->session;
+
+This method is generated on the controller of the project.
+
+Data is TIEHASH object.
+Tied is used to access this handler object.
+
+  tied(%{$e->session})->session_id;
+
+=over 4
+
+=item * Alias: sss
+
+=back
+
+=cut
 *sss= \&session;
 
-sub setup {
+sub _setup {
 	my($e)= @_;
-	my $conf = $e->config->{plugin_session} ||= {};
-	my $tconf= $conf->{ticket} ||= {};
-	$tconf->{param_name} ||= 'ticket';
-	my $tclass=
-	  'Egg::Plugin::SessionKit::Issue::'. ($tconf->{issue} || 'MD5');
-	$tclass->require;
-	tied(%{$e->global})->global_overwrite(
-	  EGG_SESSION_TICKET_ISSUE_CODE=>
-	    sub { $tclass->issue_id($tconf->{length} || 32) }
-	  );
-	my $handler= $e->global->{EGG_SESSION_HANDLER} ||= __PACKAGE__.'::handler';
-	$handler->startup($e);
+	my $conf= $e->config->{plugin_session} ||= {};
+	my $ticket= $conf->{ticket} ||= {};
+	$ticket->{param_name} ||= 'ticket';
+	my $handler= $e->global->{session_handler}
+	         ||= 'Egg::Plugin::SessionKit::handler';
+	$handler->_startup($e, $conf);
+	$handler= __PACKAGE__."::Base::$conf->{base}{name}";
+	no strict 'refs';  ## no critic
+	no warnings 'redefine';
+	*{"$e->{namespace}::session"}= sub {
+		$_[0]->{session} ||= do {
+			my($egg)= @_;
+			my %session;
+			tie %session, $handler, $egg, $conf;
+			tied(%session)->_setup_session_data;
+			\%session;
+		  };
+	  };
 	$e->next::method;
 }
-sub session {
-	$_[0]->{session} ||= do {
-		my $e= shift;
-		my $handler= $e->global->{EGG_SESSION_HANDLER};
-		my %session;
-		tie %session, $handler, $e, $e->config->{plugin_session};
-		\%session;
-	  };
+
+=head2 mk_md5hex_id ( [LENGTH_SCALAR_REF] )
+
+ID is issued by L<Digest::MD5>::md5_hex.
+
+When LENGTH_SCALAR_REF is omitted, it becomes id of 32 digits.
+
+  my $id= $e->mk_md5hex_id(\'64');
+
+=cut
+sub mk_md5hex_id {
+	my $e= shift;  rand(1000);
+	my $len= ref($_[0]) eq 'SCALAR' ? ${$_[0]}: 32;
+	substr(
+	  Digest::MD5::md5_hex(
+	  Digest::MD5::md5_hex(time. {}. rand(1000). $$)
+	  ), 0, $len );
 }
+
+=head2 ticket_id ( [BOOL] )
+
+id issued by 'mk_md5hex_id' is set in the session when an effective value to BOOL is given 
+and it returns it.
+
+id set to give an invalid value to BOOL in the session is invalidated.
+
+  $e->request->param( ticket => $e->ticket_id(1) );
+
+=cut
 sub ticket_id {
 	my $e= shift;
-	if (@_) {
-		$e->session->{session_ticket_id}=
-		  $_[0] ? $e->global->{EGG_SESSION_TICKET_ISSUE_CODE}->(): 0;
-	}
-	$e->session->{session_ticket_id};
+	return $e->session->{session_ticket_id} || 0 unless @_;
+	$e->session->{session_ticket_id}= $_[0] ? $e->mk_md5hex_id(@_): 0;
 }
+
+=head2 ticket_check ( [TICKET_ID] )
+
+It checks whether the ticket on the session set before is corresponding
+to TICKET_ID.
+
+When TICKET_ID is omitted, it checks it for the form data corresponding
+to ticket->{param_name} of the setting.
+
+  if ($e->ticket_check) {
+    print "Ticket OK";
+  } else {
+    print "Ticket NG";
+  }
+
+=cut
 sub ticket_check {
 	my $e= shift;
 	my $ticket= shift
@@ -57,51 +259,118 @@ sub ticket_check {
 	$e->debug_out("# - ticket is unmatched. ($ticket = $id)");
 	return 0;
 }
-sub finalize {
-	my($e)= @_;
-	if ($e->{session}) {
-		untie %{$e->{session}};
-		$e->{session}= undef;
-	}
-	$e->next::method;
+
+=head2 _finalize
+
+For method call that Egg does.
+
+Whether the session is preserved here is judged.
+
+* There might be a thing that doesn't operate normally in the order of loading
+  of the plugin. Please adjust the order of loading when the problem occurs.
+
+=cut
+sub _finalize {
+	my($e)= shift->next::method;
+	return $e unless $e->{session};
+	untie %{$e->{session}};
+	$e->{session}= undef;
+	return $e;
 }
 
 package Egg::Plugin::SessionKit::handler;
 use strict;
 use warnings;
-use UNIVERSAL::require;
 use Class::C3;
+use UNIVERSAL::require;
+use base qw/Class::Accessor::Fast/;
 
-sub startup {
-	my($class, $e)= @_;
-	return @_ if $e->global->{EGG_SESSION_STARTUP};
-	$e->global->{EGG_SESSION_STARTUP}= 1;
-	no strict 'refs';  ## no critic
-	no warnings 'redefine';
+=head1 HANDLER METHODS
 
-	my $conf= $e->config->{plugin_session} ||= {};
-	@{__PACKAGE__.'::ISA'}= 'Egg::Plugin::SessionKit::base';
-	$e->debug_out("#=== Composition of SessionKit =========");
-	my @requires;
-	for my $a (
-	  [qw/base  FileCache/],
-	  [qw/store Plain/ ],
-	  [qw/bind  Cookie/],
-	  [qw/issue MD5/   ],
-	  ) {
-		my $type= ucfirst($a->[0]);
-		my $cf  = $conf->{$a->[0]} ||= {};
-		my $name= $cf->{name} ||= $a->[1];
-		my $pkg = "Egg::Plugin::SessionKit::$type\::$name";
-		unshift @{__PACKAGE__.'::ISA'}, $pkg;
-		unshift @requires, $pkg;
-		$e->debug_out("# + $pkg");
+Tied is used to access these methods.
+
+  tied(%{$e->session}->method;
+
+These methods are chiefly the one for the component of this plugin.
+It is not necessary to use from the application side, and the method of
+generating the inconvenience when using it is included usually.
+
+=head2 e
+
+Accessor to Egg object.
+
+=head2 config
+
+Accessor to 'Plugin_session' set value.
+
+=head2 new_entry
+
+True is restored for a new session.
+
+=head2 update_ok
+
+It becomes true if the value is set in the session, and when processing is
+ended, the session data is preserved.
+
+=cut
+
+__PACKAGE__->mk_accessors
+  (qw/ e config new_entry update_ok rollback param_name id_length /);
+
+=head2 session_id
+
+Accessor to refer to present session id.
+
+=head2 user_agent
+
+Accessor to refer to HTTP_USER_AGENT of accessed client.
+
+=head2 remote_addr
+
+Accessor to refer to REMOTE_ADDR of accessed client.
+
+=head2 create_time
+
+Accessor to refer to epoc value at time that session was made.
+
+=head2 access_time_old
+
+Accessor to refer to epoc value at time accessed last time.
+
+=head2 access_time_now
+
+Accessor to refer to epoc value at present time.
+
+=cut
+
+__PACKAGE__->mk_session_accessors
+  (qw/ session_id user_agent remote_addr create_time access_time_old access_time_now /);
+
+sub _startup {
+	my($class, $e, $conf)= @_;
+
+	no strict 'refs';  ## no critic.
+	$conf->{base}= $class->_get_config($conf, 'base', 'FileCache');
+	my $b_class= "Egg::Plugin::SessionKit::Base::$conf->{base}{name}";
+	my $isa = \@{"${b_class}::ISA"};
+	push @$isa, __PACKAGE__;
+	$b_class->require or die $@;
+	my @includes;
+	for my $a ( [qw/issue MD5/], [qw/bind Cookie/], [qw/store Plain/] ) {
+		$conf->{$a->[0]}= $class->_get_config($conf, @$a);
+		my $pkg= "Egg::Plugin::SessionKit::"
+		       . ucfirst($a->[0]). "::$conf->{$a->[0]}{name}";
+		unshift @$isa, $pkg;
+		$pkg->require or die $@;
 	}
-	$_->require or Egg::Error->throw($@) for @requires;
-	$e->debug_out("#=======================================");
+	if ($e->debug) {
+		$e->debug_out("# + $e->{namespace} - SessionKit:\n"
+		            . "#   - ". join("\n#   - ", @$isa) );
+	}
 
+	no warnings 'redefine';
 	my $agent= exists($conf->{verifi_agent}) ? $conf->{verifi_agent}: 0;
-	*{__PACKAGE__.'::agent_check'}= $agent ? do {
+	*agent_check= $agent ? do {
 		$e->debug_out("# + session verifi_agent: ON.");
 		sub {
 			my $ss= shift;
@@ -115,7 +384,7 @@ sub startup {
 
 	my $level= exists
 	  ($conf->{ipaddr_check_level}) ? $conf->{ipaddr_check_level}: 1;
-	*{__PACKAGE__.'::ipaddr_check'}= $level ? do {
+	*ipaddr_check= $level ? do {
 		$level=~/^(?:1|C)/i ? do {
 			$e->debug_out("# + session ipaddr check: C class.");
 			sub {
@@ -137,59 +406,109 @@ sub startup {
 		sub { 1 };
 	  };
 
-	for my $accesssor (qw/session_id user_agent
-	  remote_addr create_time access_time_old access_time_now/) {
-		*{"Egg::Plugin::SessionKit::base::$accesssor"}=
-		  sub { $_[0]->{params}{"session_$accesssor"} || 0 };
-	}
-
-	$class->SUPER::startup($e, $conf);
+	$b_class->startup($e, $conf);
 }
-
-package Egg::Plugin::SessionKit::base;
-use strict;
-use warnings;
-use base qw/Egg::Plugin::SessionKit::TieHash/;
-
-sub startup { @_ }
-sub commit_ok { }
 
 sub TIEHASH {
-	my($class, $e)= @_;
-	my $ss= $class->SUPER::TIEHASH($e);
-	$ss->{config}= $e->config->{plugin_session};
-	$ss->{param_name}= $ss->{config}->{bind_param_name} || '';
-	$ss->{id_length} = $ss->{config}->{session_id_length} || 0;
-	$ss->{params}= $ss->get_session_data;
-	$ss;
+	my($class, $e, $conf)= @_;
+	bless {
+	  e=> $e, config=> $conf, session=> {},
+	  param_name => ($conf->{bind_param_name}
+	              || $conf->{bind}{param_name} || ''),
+	  id_length  => ($conf->{session_id_length}
+	              || $conf->{issue}{id_length} || 32),
+	  new_entry  => 0,
+	  update_ok  => 0,
+	  rollback   => 0,
+	  }, $class;
 }
-sub get_session_data {
+sub FETCH    { $_[0]->{session}{$_[1]} }
+sub EXISTS   { exists($_[0]->{session}{$_[1]}) }
+sub NEXTKEY  { each %{$_[0]->{session}} }
+sub FIRSTKEY { my $s= keys %{$_[0]->{session}}; each %{$_[0]->{session}} }
+
+sub STORE {
+	my($ss, $key, $value)= @_;
+	$ss->update_ok(1) unless $ss->update_ok;
+	$ss->{session}{$key}= $value;
+}
+sub DELETE {
+	my($ss, $key)= @_;
+	$ss->update_ok(1) unless $ss->update_ok;
+	delete($ss->{session}{$key});
+}
+sub CLEAR {
 	my($ss)= @_;
-	my $id= $ss->get_session_id();
-	my $data= {};
-	unless ($ss->new_entry) {
-		$ss->e->debug_out("# + session restore: $id");
-		$data= $ss->restore($id) || do { $id= $ss->create_session_id; {} };
-	}
-	$ss->normalize($data, $id);
+	$ss->update_ok(1) unless $ss->update_ok;
+	$ss->{session}= {};
 }
+
+=head2 mk_session_accessors ( [ACCESOR_NAME_LIST] )
+
+The accessor for the session data reference is generated.
+
+'session_' adheres to the head of the name of the key without fail.
+
+  __PACKAGE__->mk_session_accessors(qw/ hoge hooo /);
+
+=cut
+sub mk_session_accessors {
+	my $class= ref($_[0]) || $_[0]; shift;
+	no strict 'refs';  ## no critic
+	no warnings 'redefine';
+	for my $accessor (@_) {
+		*{"${class}::$accessor"}=
+		  sub { $_[0]->{session}{"session_$accessor"} || 0 };
+	}
+}
+
+=head2 get_session_id
+
+Session id is returned.
+
+If it is a session of new issue, and generation of id when the session is new,
+id in data is returned.
+
+=cut
 sub get_session_id {
 	my $ss= shift;
-	if (my $id= $ss->get_bind_data($ss->{param_name})) {
-		return ($ss->issue_check_id($id, $ss->{id_length})
-		     || $ss->create_session_id);
+	if (my $id= $ss->get_bind_data($ss->param_name)) {
+		return ($ss->issue_check_id($id) || $ss->create_session_id);
 	} else {
 		return  $ss->create_session_id;
 	}
 }
+
+=head2 create_session_id
+
+Session id is newly issued and a prescribed procedure is done.
+
+=cut
 sub create_session_id {
 	my($ss)= @_;
-	my $id= $ss->issue_id
-	  || Egg::Error->throw(q/e->issue_id doesn't function normally./);
+	my $id= $ss->issue_id || die q{ e->issue_id doesn't function normally. };
 	$ss->e->debug_out("# + session new_entry : $id");
 	$ss->new_entry(1);
-	return $id;
+	$id;
 }
+
+=head2 create_session_id ( [SESSION_ID] )
+
+Whether it is effective session ID is checked.
+
+=cut
+sub issue_check_id {
+	my $ss  = shift;
+	my $id  = shift || return 0;
+	my $leng= $ss->id_length;
+	$id=~/^[A-Fa-f0-9]{$leng}$/ ? $id: 0;
+}
+
+=head2 normalize ( [SESSION_DATA_HASH], [SESSION_ID] )
+
+The initial value that is sure to be included in the session data is set up.
+
+=cut
 sub normalize {
 	my($ss, $data, $id)= @_;
 	if (my $agent= $data->{session_user_agent})
@@ -204,24 +523,51 @@ sub normalize {
 	$data->{session_access_time_now}= time;
 	$data;
 }
+
+=head2 change
+
+Session id is updated and time that the issue do over again and the session
+were made is updated.
+
+Other existing data is maintained as it is.
+
+=cut
 sub change {
 	my($ss)= @_;
-	$ss->{params}{session_id}= $ss->create_session_id;
-	$ss->{params}{create_time} ||= time;
+	$ss->{session}{session_session_id} = $ss->create_session_id;
+	$ss->{session}{session_create_time}= time;
 	$ss->update_ok(1);
 	$ss;
 }
+
+=head2 clear
+
+It tries to initialize the existing data and to issue session id.
+
+=cut
 sub clear {
 	my($ss)= @_;
-	$ss->{params}= $ss->normalize({}, $ss->create_session_id);
+	$ss->{session}= $ss->normalize({}, $ss->create_session_id);
 	$ss->update_ok(1);
 	$ss;
 }
+
+=head2 output_session_id
+
+It prepares it. send the client session id.
+
+=cut
 sub output_session_id {
 	my $ss= shift;
 	my $id= shift || $ss->session_id;
-	$ss->set_bind_data($ss->{param_name}=> $id, @_);
+	$ss->set_bind_data( $ss->param_name => $id, @_ );
 }
+
+=head2 close
+
+Data is preserved if necessary, and the session is shut.
+
+=cut
 sub close {
 	my($ss)= @_;
 	if ($ss->e && $ss->update_ok && ! $ss->rollback) {
@@ -240,231 +586,112 @@ sub close {
 	$ss;
 }
 
-1;
+=head2 commit_ok
 
-__END__
+* It is a method of the dummy.
 
-=head1 NAME
+=cut
+sub commit_ok { }
 
-Egg::Plugin::SessionKit - Session plugin for Egg.
+=head2 startup
 
-=head1 SYNOPSIS
+* It is a method of the dummy.
 
-  package [MYPROJECT];
-  use strict;
-  use Egg qw/SessionKit/;
+=cut
+sub startup   { @_ }
 
-Configuration.
+=head2 DESTROY
 
-  plugin_session=> {
-    bind_param_name   => 'ss';
-    session_id_length => 32,
-    base=> {
-      name => 'FileCache',
-      cache_root=> ...
-      ... Other Cache::FileCache options.
-      },
-    bind=> {
-      name=> 'Cookie',
-      },
-    store=> {
-      name=> 'Plain',
-      },
-    issue=> {
-      name=> 'MD5',
-      },
-    ticket=> {
-      issue => 'MD5',
-      length=> 32,
-      },
-    },
+Close is called.
 
-Example of code.
+=cut
+sub DESTROY   { $_[0]->close }
 
-  # The value is preserved in session.
-  $e->session->{any_data}= 'banban';
-  
-  # Refer to session id.
-  print "sesson_id : ". tied(%{$e->session})->session_id;
-  
-  # Session id is changed. Data is succeeded.
-  tied(%{$e->session})->change;
-  
-  # It initializes in the session data.
-  tied(%{$e->session})->clear;
-  
-  # The ticket is temporarily issued.
-  my $ticket= $e->ticket_id(1);
-  
-  # Tickets that have been issued are compared.
-  if (my $ticket= $e->ticket_check) {
-  	print "OK";
-  } else {
-  	print "NG";
-  }
+sub _get_config {
+	my($class, $conf, $name, $default)= @_;
+	my $c= $conf->{$name} || {};
+	if (my $ref= ref($c)) {
+		$c= { name=> $c->[0], %{ $c->[1] || {} } } if $ref eq 'ARRAY';
+	} else {
+		$c= { name=> $c };
+	}
+	$c->{name} ||= $default;
+	$c;
+}
+sub _setup_session_data {
+	$_[0]->{session}= $_[0]->_get_session_data;
+}
+sub _get_session_data {
+	my($ss)= @_;
+	my $id= $ss->get_session_id();
+	my $data= {};
+	unless ($ss->new_entry) {
+		$ss->e->debug_out("# + session restore: $id");
+		$data= $ss->restore($id) || do { $id= $ss->create_session_id; {} };
+	}
+	$ss->normalize($data, $id);
+}
 
-=head1 CONFIGURATION
+=head1 COMPONENTS
 
-=head2 bind_param_name
+It is a list of the component included in this package.
 
-Parameter name that uses session ID when client and receiving and passing it.
+Please it doesn't operate normally according to the combination.
 
-B<Default is 'ss'.>
+=head2 Base
 
-=head2 session_id_length
+* L<Egg::Plugin::SessionKit::Base::FileCache>
 
-Length of issued session id.
+The session by L<Cache::FileCache> is supported.
 
-B<Default is '32'.>
+* L<Egg::Plugin::SessionKit::Base::DBI>
 
-=head2 base
+The session by L<Egg::Model::DBI> is supported.
 
-Please specify the module that controls basic operation of the session by 'name' field.
-The package name is supplemented with 'Egg::Plugin::SessionKit::Base'.
+* L<Egg::Plugin::SessionKit::Base::DBIC>
 
-B<Default is 'FileCache'.>
+The session by L<Egg::Model::DBIC> is supported.
 
-Additionally, it becomes an option to pass to the module.
+=head2 Store
 
-=head2 bind
+* L<Egg::Plugin::SessionKit::Store::Base64>
 
-The module related to the delivery processing of session id is specified in 'name' field.
-The package name is supplemented with 'Egg::Plugin::SessionKit::Bind'.
+The session data is made a text. For preserving it to data base chiefly.
 
-B<Default is 'Cookie'.>
+* L<Egg::Plugin::SessionKit::Store::Plain>
 
-Additionally, it becomes an option to pass to the module.
+When you do not want to give the processing to the session data. For Cache
+module chiefly.
 
-=head2 store
+=head2 Bind
 
-The module concerning the preservation form of the session data is specified in 'Name' field.
-The package name is supplemented with 'Egg::Plugin::SessionKit::Store'.
+* L<Egg::Plugin::SessionKit::Bind::Cookie>
 
-B<Default is 'Plain'.>
+Session id is preserved in the client by Cookie.
 
-Additionally, it becomes an option to pass to the module.
+=head2 Issue
 
-Please note compatibility with the module specified for 'base'.
+* L<Egg::Plugin::SessionKit::Issue::UniqueID>
 
-=head2 issue
+Session id is issued with id obtained from mod_unique_id of Apache.
 
-The module concerning session id issue is specified in 'Name' field.
-The package name is supplemented with 'Egg::Plugin::SessionKit::Issue'.
+* L<Egg::Plugin::SessionKit::Issue::MD5>
 
-B<Default is 'MD5'.>
+Session ID is issued by L<Digest::MD5>.
 
-Additionally, it becomes an option to pass to the module.
+* L<Egg::Plugin::SessionKit::Issue::UUID>
 
-=head2 ticket
+Session ID is issued by L<Data::UUID>.
 
-It is temporarily a setting concerning the ticket.
+* L<Egg::Plugin::SessionKit::Issue::SHA1>
 
-=over 4
-
-=item * issue
-
-Please specify the module that issues ticket id.
-Thing without fail to specify module that subordinate of 'Egg::Plugin::SessionKit::Issue' has.
-
-B<Default is 'MD5'.>
-
-=item * length
-
-The length of ticket ID is set.
-
-B<Default is '32'.>
-
-=item * param_name
-
-Form name when ticket is handed over.
-
-B<Default is 'ticket'.>
-
-=back
-
-=head1 METHODS
-
-=head2 $e->session  or $e->sss;
-
-The HASH reference of the session is obtained.
-
-Please use tied if you want the session object.
-
- my $session_oject= tied(%{$e->session});
-
-=head2 $session_oject->session_id;
-
-Present session ID is returned.
-
-=head2 $session_oject->user_agent
-
-$ENV{HTTP_USER_AGENT} preserved in the session is returned.
-
-=head2 $session_oject->remote_addr
-
-IP address preserved in the session is returned.
-
-=head2 $session_oject->create_time
-
-The time value when the session under the access is made is returned.
-
-=head2 $session_oject->access_time_now
-
-time value now at the time of preserved it in the session is returned.
-
-=head2 $session_oject->access_time_old
-
-The time value when it was accessed before is returned.
-
-=head2 $session_oject->change
-
-Only session id is changed. Other data is maintained.
-And, create_time becomes new, too.
-
-=head2 $session_oject->clear
-
-All present sessions are abandoned and it renews it.
-
-=head2 $e->ticket_id([Boolean]);
-
-1 The ticket is temporarily issued when giving it and is preserved in the session.
-0 Invalidates the ticket preserved in the session when giving it.
-
-  my $ticket= $e->ticket_id(1);
-
-=head2 $e->ticket_check([TICKET_ID]);
-
-The ticket preserved in the session and the given ticket are compared.
-When the ticket is corresponding, the given ticket is returned.
-
-When [TICKET_ID] is omitted, the value is picked up from $e->request->param.
-
-  if ($e->ticket_check) {
-    .... processing is executed.
-  } else {
-    print "Processing is completed.";
-  }
-
-=head2 finalize
-
-It is a method that calls from Egg::Engine. It commits it if necessary.
-
-=head2 setup
-
-It is a method for the start preparation that is called from the controller of 
-the project. * Do not call it from the application.
+Session ID is issued by L<Digest::SHA1>.
 
 =head1 SEE ALSO
 
-L<Egg::Plugin::SessionKit::TieHash>,
-L<Egg::Plugin::SessionKit::Base::FileCache>,
-L<Egg::Plugin::SessionKit::Base::DBIC>,
-L<Egg::Plugin::SessionKit::Base::DBI>,
-L<Egg::Plugin::SessionKit::Bind::Cookie>,
-L<Egg::Plugin::SessionKit::Store::Plain>,
-L<Egg::Plugin::SessionKit::Store::Base64>,
-L<Egg::Plugin::SessionKit::Issue::MD5>,
-L<Egg::Plugin::SessionKit::Issue::UniqueID>,
+L<Class::C3>,
+L<Digest::MD5>,
+L<Class::Accessor::Fast>,
 L<Egg::Release>,
 
 =head1 AUTHOR
@@ -481,3 +708,4 @@ at your option, any later version of Perl 5 you may have available.
 
 =cut
 
+1;

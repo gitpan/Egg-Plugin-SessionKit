@@ -1,116 +1,43 @@
 package Egg::Plugin::SessionKit::Base::DBIC;
 #
-# Copyright (C) 2007 Bee Flag, Corp, All Rights Reserved.
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBIC.pm 69 2007-03-26 02:15:26Z lushe $
+# $Id: DBIC.pm 136 2007-05-12 12:49:36Z lushe $
 #
-use strict;
-use warnings;
-
-our $VERSION = '0.02';
-
-my @context_fields=
-qw{ _schema_name _model_name id_field data_field access_field };
-my @config_fields=
-qw{ _schema_name _model_name id_field_name data_field_name access_field_name };
-
-sub startup {
-	my($class, $e, $conf)= @_;
-	$e->isa('Egg::Plugin::DBIC::Transaction') ||
-	  Egg::Error->throw(qq{ Please build in plugin 'DBIC::Transaction'. });
-	my $schema= lc($conf->{base}{schema_name})
-	  || Egg::Error->throw(qq{ I want setup 'schema_name'. });
-	my $source= lc($conf->{base}{source_name})
-	  || Egg::Error->throw(qq{ I want setup 'schema_name'. });
-	$e->is_model("$schema\:$source")
-	  || Egg::Error->throw(qq{ '$schema\:$source' model is not found. });
-	$conf->{base}{_schema_name} = "$schema";
-	$conf->{base}{_model_name}  = "$schema\:$source";
-	$conf->{base}{id_field_name} ||= 'id';
-	$conf->{base}{data_field_name} ||= 'session';
-	$conf->{base}{access_field_name} ||= 'access_date';
-	$class->next::method($e, $conf);
-}
-sub TIEHASH {
-	my($ss, $e, $conf)= @_;
-	$ss= bless {}, $ss unless ref($ss);
-	@{$ss}{@context_fields}= @{$conf->{base}}{@config_fields};
-	$ss->next::method($e, $conf);
-}
-sub restore {
-	my $ss= shift;
-	my $id= shift || return 0;
-	my $field = $ss->{data_field};
-	$ss->{_session}= $ss->model->find($id) || return 0;
-	my $data= $ss->{_session}->$field;
-	$ss->store_decode( \$data );
-}
-sub insert {
-	my($ss)= @_;
-	undef($ss->{_session}) if $ss->{_session};
-	$ss->model->create({
-	  $ss->{id_field}    => $ss->session_id,
-	  $ss->{data_field}  => $ss->store_encode($ss->{params}),
-	  $ss->{access_field}=> $ss->__now_date,
-	  });
-}
-sub update {
-	my($ss)= @_;
-	my($access_field, $data_field)= @{$ss}{qw/ access_field data_field/};
-	$ss->{_session}->$access_field( $ss->__now_date );
-	$ss->{_session}->$data_field( $ss->store_encode($ss->{params}) );
-	$ss->{_session}->update;
-}
-sub commit_ok {
-	my($ss)= @_;
-	my $commit_ok= "$ss->{_schema_name}_commit_ok";
-	$ss->e->$commit_ok(@_);
-}
-sub close {
-	my($ss)= @_;
-	my $rollback_ok= "$ss->{_schema_name}_commit_ok";
-	$ss->rollback(1) if $ss->e->$rollback_ok;
-	$ss->next::method;
-}
-sub model {
-	$_[0]->{__model} ||= $_[0]->e->model( $_[0]->{_model_name} );
-}
-sub __now_date {
-	my @tm= localtime(time);
-	$tm[5]+= 1900; ++$tm[4];
-	sprintf "%04d-%02d-%02d %02d:%02d:%02d", reverse(@tm[0..5]);
-}
-
-1;
-
-__END__
 
 =head1 NAME
 
-Egg::Plugin::SessionKit::Base::DBIC - DBIx::Class for SessonKit plugin.
+Egg::Plugin::SessionKit::DBI - Egg::Model::DBI for session.
 
 =head1 SYNOPSIS
 
-  use Egg qw/SessionKit DBIC::Transaction/;
-
-Configuration.
-
-  plugin_session=> {
-    base=> {
-      name              => 'DBIC',
-      schema_name       => 'MyApp',
-      source_name       => 'Sessions',
-      id_field_name     => 'id',
-      data_field_name   => 'a_session',
-      access_field_name => 'lastmod',
+  use Egg qw/ SessionKit DBIC::Transaction /;
+  
+  __PACKAGE__->mk_eggstartup(
+    .......
+    ...
+    MODEL => [ [ DBIC => {} ] ],
+    
+    plugin_session => {
+      base => {
+        name        => 'DBIC',
+        schema_name => 'MySchema',
+        source_name => 'Sessions',
+        data_field  => 'a_session',
+        time_field  => 'lastmod',
+        },
+      .......
+      ...
       },
-    store=> { name=> 'Base64' },
-    },
+    );
 
 =head1 DESCRIPTION
 
-Please prepare the table for the following sessions.
+The session by L<Egg::Model::DBIC> is supported.
+
+It is necessary to load L<Egg::Plugin::DBIC::Transaction>.
+
+Please make the table for the following sessions for the data base used.
 
   CREATE TABLE sessions (
     id        char(32)   primary key,
@@ -118,52 +45,155 @@ Please prepare the table for the following sessions.
     a_session text
     );
 
-Please build in and use Egg::Plugin::DBIC::Transaction.
+* It is not forgotten to set an appropriate authority.
 
-* AutoCommit が有効でも E::P::DBIC::Transaction を使用して下さい。
-  E::P::DBIC::Transaction は AutoCommit の状態に応じた動作をします。
+And, the helper of L<Egg::Model::DBIC> is executed and Schema is made.
 
-=over 4
+* Please set L<Egg::Plugin::SessionKit::Store::Base64> to the Store module.
 
-=item close, commit_ok, insert, restore, startup, update, model,
+* The function to clear the data not used is not included.
+  Separately, it is necessary to delete it with cron etc. regularly.
 
-These methods are called from the base module.
-
-=back
-
-=head1 CONFIGURATION
-
-plugin_session->{base} is a setting of this module.
-
-=head2 name
-
-Please give to me as 'B<DBIC>' if you use this module.
+=head1 CONFIGRATION
 
 =head2 schema_name
 
-Name of schema module that data table used belongs.
+Name of Schema used.
+
+There is no default. Please set it.
 
 =head2 source_name
 
-Name of module of data table.
+Name of table module for session.
 
-=head2 id_field_name
+There is no default. Please set it.
 
-Name of ID column.
+=head2 data_field
 
-=head2 access_field_name
+Name of column that stores session data.
 
-Name of last updated date column.
+Default is 'a_session'.
 
-=head2 data_field_name
+=head2 time_field
 
-Name of session data column.
+Name of column that stores updated day and hour.
+
+Default is 'lastmod'.
+
+=cut
+use strict;
+use warnings;
+use Time::Piece::MySQL;
+
+our $VERSION = '2.00';
+
+__PACKAGE__->mk_accessors(qw/ model dbic schema datafield timefield /);
+
+=head1 METHODS
+
+=head2 startup
+
+The setting is checked.
+
+=cut
+sub startup {
+	my($class, $e, $conf)= @_;
+	$e->isa('Egg::Plugin::DBIC::Transaction')
+	   || die q{ Please build in plugin 'DBIC::Transaction'. };
+	my $base= $conf->{base} ||= {};
+	my $schema= lc($base->{schema_name})
+	          || die q{ I want setup 'schema_name'. };
+	my $source= lc($base->{source_name})
+	          || die q{ I want setup 'source_name'. };
+	$e->is_model("${schema}:${source}")
+	          || die qq{ '${schema}:${source}' model is not found. };
+	$base->{schema_name}= "${schema}";
+	$base->{model_name} = "${schema}:${source}";
+	$base->{data_field} ||= 'a_session';
+	$base->{time_field} ||= 'lastmod';
+	$class->next::method($e, $conf);
+}
+
+sub TIEHASH {
+	my($ss)= shift->SUPER::TIEHASH(@_);
+	my $base= $ss->config->{base};
+	$ss->datafield($base->{data_field});
+	$ss->timefield($base->{time_field});
+	$ss->schema($base->{schema_name});
+	$ss->model($ss->e->model($base->{model_name}));
+	$ss;
+}
+
+=head2 restore ( [SESSION_ID] )
+
+The session data is acquired.
+
+=cut
+sub restore {
+	my $ss= shift;
+	my $id= shift || return 0;
+	my $datafield= $ss->datafield;
+	$ss->dbic($ss->model->find($id)) || return 0;
+	my $data= $ss->dbic->$datafield;
+	return $ss->store_decode(\$data);
+}
+
+=head2 insert
+
+New session data is added.
+
+=cut
+sub insert {
+	my($ss)= @_;
+	$ss->dbic(0) if $ss->dbic;
+	$ss->model->create({
+	  id => $ss->session_id,
+	  $ss->datafield=> $ss->store_encode($ss->{session}),
+	  $ss->timefield=> localtime(time)->mysql_datetime,
+	  });
+}
+
+=head2 update
+
+Existing session data is updated.
+
+=cut
+sub update {
+	my($ss)= @_;
+	my($datafield, $timefield)= ($ss->datafield, $ss->timefield);
+	$ss->dbic->$datafield( $ss->store_encode($ss->{session}) );
+	$ss->dbic->$timefield( localtime(time)->mysql_datetime );
+	$ss->dbic->update;
+}
+
+=head2 commit_ok
+
+Accessor to $e-E<gt>[SCHEMA_NAME]_commit_ok.
+
+=cut
+sub commit_ok {
+	my $ss= shift;
+	my $commit_ok= $ss->schema. "_commit_ok";
+	return $ss->e->$commit_ok(@_);
+}
+
+=head2 close
+
+Rollback is set if there are signs where some errors occurred before shutting
+the session.
+
+=cut
+sub close {
+	my($ss)= @_;
+	my $rollback_ok= $ss->schema. "_rollback_ok";
+	$ss->rollback(1) if $ss->e->$rollback_ok;
+	$ss->next::method;
+}
 
 =head1 SEE ALSO
 
 L<Egg::Model::DBIC>,
-L<Egg::Plugin::DBIC::Transaction>,
-L<Egg::SessionKit>,
+L<Egg::Plugin::SessionKit>,
 L<Egg::Release>,
 
 =head1 AUTHOR
@@ -180,3 +210,4 @@ at your option, any later version of Perl 5 you may have available.
 
 =cut
 
+1;
