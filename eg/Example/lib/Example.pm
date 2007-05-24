@@ -30,7 +30,10 @@ __PACKAGE__->egg_startup(
   MODEL => [ [ DBIC => {} ] ],
 
   plugin_session => {
-    base  => [ DBIC => { schema_name=> 'Schema', source_name=> 'Session' } ],
+    base => [ DBIC => {
+      schema_name=> 'MySchema',
+      source_name=> 'Sessions',
+      } ],
     store => 'Base64',
     },
 

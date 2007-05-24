@@ -18,7 +18,7 @@ isa_ok tied(%$session), 'Egg::Plugin::SessionKit::handler';
 isa_ok tied(%$session), 'Egg::Plugin::SessionKit::Base::FileCache';
 isa_ok tied(%$session), 'Egg::Plugin::SessionKit::Store::Plain';
 isa_ok tied(%$session), 'Egg::Plugin::SessionKit::Bind::Cookie';
-isa_ok tied(%$session), 'Egg::Plugin::SessionKit::Issue::MD5';
+isa_ok tied(%$session), 'Egg::Plugin::SessionKit::Issue::SHA1';
 
 can_ok tied(%$session), qw/
   e

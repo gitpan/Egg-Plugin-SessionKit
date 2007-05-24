@@ -2,8 +2,13 @@ package Egg::Plugin::SessionKit::Issue::UUID;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: UUID.pm 137 2007-05-12 12:50:54Z lushe $
+# $Id: UUID.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use Data::UUID;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -28,13 +33,6 @@ Egg::Plugin::SessionKit::Issue::UUID - Session ID is issued by Data::UUID.
 =head1 DESCRIPTION
 
 Session ID is issued by L<Data::UUID>.
-
-=cut
-use strict;
-use warnings;
-use Data::UUID;
-
-our $VERSION= '2.00';
 
 =head1 METHODS
 

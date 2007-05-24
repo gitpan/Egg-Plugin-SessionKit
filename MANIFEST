@@ -14,7 +14,6 @@ lib/Egg/Plugin/SessionKit/Issue/UniqueID.pm
 lib/Egg/Plugin/SessionKit/Issue/UUID.pm
 lib/Egg/Plugin/SessionKit/Store/Base64.pm
 lib/Egg/Plugin/SessionKit/Store/Plain.pm
-lib/Egg/Plugin/SessionKit/TieHash.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -24,7 +23,7 @@ t/01_session_filecache.t
 t/02_session_dbi.t
 t/03_session_dbic.t
 t/04_issue_uuid.t
-t/05_issue_sha1.t
+t/05_issue_md5.t
 t/87_pod_coverage.t
 t/88_perlcritic.t
 t/89_pod.t

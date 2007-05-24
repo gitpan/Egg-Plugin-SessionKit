@@ -2,8 +2,12 @@ package Egg::Plugin::SessionKit::Store::Plain;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Plain.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: Plain.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -38,10 +42,6 @@ verbs and objects.
 =back
 
 =cut
-use strict;
-use warnings;
-
-our $VERSION= '2.00';
 
 sub store_encode { $_[1] }
 sub store_decode { ${$_[1]} }

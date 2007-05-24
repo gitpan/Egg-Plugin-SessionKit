@@ -2,8 +2,13 @@ package Egg::Plugin::SessionKit::Issue::MD5;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: MD5.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: MD5.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use Digest::MD5;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -30,12 +35,6 @@ Egg::Plugin::SessionKit::Issue::MD5 - Session id is issued by Digest::MD5.
 
 Session ID is issued by L<Digest::MD5>.
 
-=cut
-use strict;
-use warnings;
-
-our $VERSION= '2.00';
-
 =head1 METHODS
 
 =head2 issue_id
@@ -44,7 +43,10 @@ Session id is issued.
 
 =cut
 sub issue_id {
-	$_[0]->e->mk_md5hex_id(\$_[0]->id_length);
+	substr(
+	  Digest::MD5::md5_hex(
+	  Digest::MD5::md5_hex(time. {}. rand(1000). $$)
+	  ), 0, $_[0]->id_length );
 }
 
 =head1 SEE ALSO

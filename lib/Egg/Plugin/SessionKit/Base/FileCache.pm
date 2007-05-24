@@ -2,8 +2,13 @@ package Egg::Plugin::SessionKit::Base::FileCache;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: FileCache.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: FileCache.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use Cache::FileCache;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -40,11 +45,6 @@ The setting becomes an option to pass everything to L<Cache::FileCache>.
 Please refer to the document of L<Cache::FileCache>.
 
 =cut
-use strict;
-use warnings;
-use Cache::FileCache;
-
-our $VERSION= '2.00';
 
 __PACKAGE__->mk_accessors('cache');
 

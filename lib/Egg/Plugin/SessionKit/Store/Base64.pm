@@ -2,8 +2,14 @@ package Egg::Plugin::SessionKit::Store::Base64;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base64.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: Base64.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use Storable qw(nfreeze thaw);
+use MIME::Base64;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -30,14 +36,6 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
 =head1 DESCRIPTION
 
 The means to make the session data a text for preservation is offered.
-
-=cut
-use strict;
-use warnings;
-use Storable qw(nfreeze thaw);
-use MIME::Base64;
-
-our $VERSION= '2.00';
 
 =head1 METHODS
 

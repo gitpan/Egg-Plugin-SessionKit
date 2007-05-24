@@ -90,7 +90,6 @@ CREATE TABLE $table (
   a_session text
   );
 END_ST
-};
 
 ok my $session_id= tied(%$session)->session_id;
 like $session_id, qr{^[0-9a-f]{32}$};
@@ -118,6 +117,7 @@ my $ticket_name= $e->config->{plugin_session}{ticket}{param_name};
 $e->request->param( $ticket_name => $ticket );
 ok $e->ticket_check;
 
+};
 $dbh->do(qq{ DROP TABLE $table });
 
   };

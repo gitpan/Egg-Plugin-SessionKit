@@ -2,8 +2,12 @@ package Egg::Plugin::SessionKit::Issue::UniqueID;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: UniqueID.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: UniqueID.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -28,12 +32,6 @@ Egg::Plugin::SessionKit::Issue::UniqueID - Session id is issued by mod_unique_id
 =head1 DESCRIPTION
 
 'mod_unique_id' of the Apache WEB server is used to issue session ID.
-
-=cut
-use strict;
-use warnings;
-
-our $VERSION= '2.00';
 
 =head1 METHODS
 

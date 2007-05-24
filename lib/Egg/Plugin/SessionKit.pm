@@ -2,8 +2,14 @@ package Egg::Plugin::SessionKit;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SessionKit.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: SessionKit.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use UNIVERSAL::require;
+use Digest::SHA1 qw/sha1_hex/;
+
+our $VERSION = '2.01';
 
 =head1 NAME
 
@@ -18,7 +24,7 @@ Egg::Plugin::SessionKit - Plugin that manages session.
     ...
     plugin_session => {
       base  => 'FileCache',
-      issue => 'MD5',
+      issue => 'SHA1',
       bind  => 'Cookie',
       store => 'Plain',
       },
@@ -90,7 +96,7 @@ The name since 'Egg::Plugin::SessionKit::Issue' is set with the name key.
 
   plugin_session=> {
     issue => {
-      name => 'MD5',
+      name => 'SHA1',
       id_length => 32,
       },
     },
@@ -144,14 +150,6 @@ follows.
 
 =back
 
-=cut
-use strict;
-use warnings;
-use UNIVERSAL::require;
-use Digest::MD5;
-
-our $VERSION = '2.00';
-
 =head1 METHODS
 
 =head2 session
@@ -199,28 +197,36 @@ sub _setup {
 	$e->next::method;
 }
 
-=head2 mk_md5hex_id ( [LENGTH_SCALAR_REF] )
+=head2 mk_sha1hex_id ( [LENGTH_SCALAR_REF] )
 
-ID is issued by L<Digest::MD5>::md5_hex.
+ID is issued by L<Digest::SHA1>::sha1_hex.
 
 When LENGTH_SCALAR_REF is omitted, it becomes id of 32 digits.
 
-  my $id= $e->mk_md5hex_id(\'64');
+  my $id= $e->mk_sha1hex_id(\'64');
+
+=over 4
+
+=item * Alias: mk_md5hex_id
+
+It is alias left for the interchangeability securing.
+It will become abolition in the future.
+So as not to use еее
+
+=back
 
 =cut
-sub mk_md5hex_id {
+*mk_md5hex_id= \&mk_sha1hex_id;
+sub mk_sha1hex_id {
 	my $e= shift;  rand(1000);
 	my $len= ref($_[0]) eq 'SCALAR' ? ${$_[0]}: 32;
-	substr(
-	  Digest::MD5::md5_hex(
-	  Digest::MD5::md5_hex(time. {}. rand(1000). $$)
-	  ), 0, $len );
+	substr(sha1_hex(time. {}. rand(1000). $$), 0, $len);
 }
 
 =head2 ticket_id ( [BOOL] )
 
-id issued by 'mk_md5hex_id' is set in the session when an effective value to BOOL is given 
-and it returns it.
+id issued by 'mk_sha1hex_id' is set in the session when an effective value to
+BOOL is given and it returns it.
 
 id set to give an invalid value to BOOL in the session is invalidated.
 
@@ -230,7 +236,7 @@ id set to give an invalid value to BOOL in the session is invalidated.
 sub ticket_id {
 	my $e= shift;
 	return $e->session->{session_ticket_id} || 0 unless @_;
-	$e->session->{session_ticket_id}= $_[0] ? $e->mk_md5hex_id(@_): 0;
+	$e->session->{session_ticket_id}= $_[0] ? $e->mk_sha1hex_id(@_): 0;
 }
 
 =head2 ticket_check ( [TICKET_ID] )
@@ -356,7 +362,7 @@ sub _startup {
 	push @$isa, __PACKAGE__;
 	$b_class->require or die $@;
 	my @includes;
-	for my $a ( [qw/issue MD5/], [qw/bind Cookie/], [qw/store Plain/] ) {
+	for my $a ( [qw/issue SHA1/], [qw/bind Cookie/], [qw/store Plain/] ) {
 		$conf->{$a->[0]}= $class->_get_config($conf, @$a);
 		my $pkg= "Egg::Plugin::SessionKit::"
 		       . ucfirst($a->[0]). "::$conf->{$a->[0]}{name}";
@@ -675,6 +681,10 @@ Session id is preserved in the client by Cookie.
 
 Session id is issued with id obtained from mod_unique_id of Apache.
 
+* L<Egg::Plugin::SessionKit::Issue::SHA1>
+
+Session ID is issued by L<Digest::SHA1>.
+
 * L<Egg::Plugin::SessionKit::Issue::MD5>
 
 Session ID is issued by L<Digest::MD5>.
@@ -683,14 +693,10 @@ Session ID is issued by L<Digest::MD5>.
 
 Session ID is issued by L<Data::UUID>.
 
-* L<Egg::Plugin::SessionKit::Issue::SHA1>
-
-Session ID is issued by L<Digest::SHA1>.
-
 =head1 SEE ALSO
 
 L<Class::C3>,
-L<Digest::MD5>,
+L<Digest::SHA1>,
 L<Class::Accessor::Fast>,
 L<Egg::Release>,
 

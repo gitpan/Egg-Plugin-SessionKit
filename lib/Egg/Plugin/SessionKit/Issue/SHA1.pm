@@ -2,8 +2,12 @@ package Egg::Plugin::SessionKit::Issue::SHA1;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SHA1.pm 137 2007-05-12 12:50:54Z lushe $
+# $Id: SHA1.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+
+our $VERSION = '2.01';
 
 =head1 NAME
 
@@ -30,13 +34,6 @@ Egg::Plugin::SessionKit::Issue::SHA1 - Session id is issued by Digest::SHA1.
 
 Session ID is issued by L<Digest::SHA1>.
 
-=cut
-use strict;
-use warnings;
-use Digest::SHA1 qw/sha1_hex/;
-
-our $VERSION = '2.00';
-
 =head1 METHODS
 
 =head2 issue_id
@@ -45,8 +42,7 @@ Session id is issued.
 
 =cut
 sub issue_id {
-	rand(1000);
-	substr(sha1_hex(time. {}. rand(1000). $$), 0, $_[0]->id_length);
+	$_[0]->e->mk_sha1hex_id(\$_[0]->id_length);
 }
 
 =head1 SEE ALSO

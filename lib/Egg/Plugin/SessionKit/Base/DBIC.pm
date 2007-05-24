@@ -2,8 +2,13 @@ package Egg::Plugin::SessionKit::Base::DBIC;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBIC.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: DBIC.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+use Time::Piece::MySQL;
+
+our $VERSION = '2.01';
 
 =head1 NAME
 
@@ -81,11 +86,6 @@ Name of column that stores updated day and hour.
 Default is 'lastmod'.
 
 =cut
-use strict;
-use warnings;
-use Time::Piece::MySQL;
-
-our $VERSION = '2.00';
 
 __PACKAGE__->mk_accessors(qw/ model dbic schema datafield timefield /);
 

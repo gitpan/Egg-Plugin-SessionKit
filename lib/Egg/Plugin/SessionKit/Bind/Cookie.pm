@@ -2,8 +2,12 @@ package Egg::Plugin::SessionKit::Bind::Cookie;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Cookie.pm 136 2007-05-12 12:49:36Z lushe $
+# $Id: Cookie.pm 159 2007-05-24 08:38:09Z lushe $
 #
+use strict;
+use warnings;
+
+our $VERSION= '2.01';
 
 =head1 NAME
 
@@ -55,12 +59,6 @@ value is set.
 Validity term of Cookie.
 
 You will not set it usually.
-
-=cut
-use strict;
-use warnings;
-
-our $VERSION= '2.00';
 
 =head1 METHODS
 

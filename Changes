@@ -1,5 +1,8 @@
 Revision history for Perl extension Egg::Plugin::SessionKit.
 
+2.01  2007/05/24
+	- The default of Issue is changed from 'MD5' to 'SHA1'.
+
 2.00  2007/05/12
 	- Corresponded to Egg::Release v2.00.
 
