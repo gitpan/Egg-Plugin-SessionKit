@@ -2,13 +2,13 @@ package Egg::Plugin::SessionKit::Issue::MD5;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: MD5.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: MD5.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 use Digest::MD5;
 
-our $VERSION= '2.01';
+our $VERSION= '2.10';
 
 =head1 NAME
 
@@ -18,16 +18,18 @@ Egg::Plugin::SessionKit::Issue::MD5 - Session id is issued by Digest::MD5.
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
+    
     plugin_session => {
-      issue => {
-        name      => 'MD5',
-        id_length => 32,
-        },
-      .......
-      ...
+      component=> [
+        [ 'Base::Module' => { ... } ],
+  
+        [ 'Issue::MD5' => { id_length => 32 } ],
+  
+        qw/ Bind::Cookie Store::Plain /,
+        ],
       },
     );
 
@@ -35,19 +37,29 @@ Egg::Plugin::SessionKit::Issue::MD5 - Session id is issued by Digest::MD5.
 
 Session ID is issued by L<Digest::MD5>.
 
+=cut
+
+sub startup {
+	my($class, $e, $conf)= @_;
+	$conf->{issue_md5}{id_length} ||= 32;
+	$class->next::method($e, $conf);
+}
+sub issue_id {
+	substr(
+	  Digest::MD5::md5_hex(time. {}. rand(1000). $$),
+	  0, $_[0]->mod_conf->{issue_md5}{id_length},
+	  );
+}
+
 =head1 METHODS
+
+=head2 startup
+
+Configuration check.
 
 =head2 issue_id
 
 Session id is issued.
-
-=cut
-sub issue_id {
-	substr(
-	  Digest::MD5::md5_hex(
-	  Digest::MD5::md5_hex(time. {}. rand(1000). $$)
-	  ), 0, $_[0]->id_length );
-}
 
 =head1 SEE ALSO
 

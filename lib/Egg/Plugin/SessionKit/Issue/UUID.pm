@@ -2,13 +2,13 @@ package Egg::Plugin::SessionKit::Issue::UUID;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: UUID.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: UUID.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 use Data::UUID;
 
-our $VERSION= '2.01';
+our $VERSION= '2.10';
 
 =head1 NAME
 
@@ -18,15 +18,15 @@ Egg::Plugin::SessionKit::Issue::UUID - Session ID is issued by Data::UUID.
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
+    
     plugin_session => {
-      issue => {
-        name => 'UUID',
-        },
-      .......
-      ...
+      component=> [
+        [ 'Base::Module' => { ... } ],
+        qw/ Issue::UUID Bind::Cookie Store::Plain /,
+        ],
       },
     );
 
@@ -34,27 +34,26 @@ Egg::Plugin::SessionKit::Issue::UUID - Session ID is issued by Data::UUID.
 
 Session ID is issued by L<Data::UUID>.
 
+=cut
+
+sub issue_id {
+	Data::UUID->new->create_str();
+}
+sub issue_check_id {
+	my $ss  = shift;
+	my $id  = shift || return 0;
+	$id=~m{^[A-Fa-f0-9\-]+$} ? $id: 0;
+}
+
 =head1 METHODS
 
 =head2 issue_id
 
 Session id is issued.
 
-=cut
-sub issue_id {
-	Data::UUID->new->create_str();
-}
-
 =head2 issue_check_id ( [SESSION_ID] )
 
 Whether it is effective session ID is checked.
-
-=cut
-sub issue_check_id {
-	my $ss  = shift;
-	my $id  = shift || return 0;
-	$id=~m{^[A-Fa-f0-9\-]+$} ? $id: 0;
-}
 
 =head1 SEE ALSO
 

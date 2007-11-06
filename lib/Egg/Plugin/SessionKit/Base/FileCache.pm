@@ -2,13 +2,13 @@ package Egg::Plugin::SessionKit::Base::FileCache;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: FileCache.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: FileCache.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 use Cache::FileCache;
 
-our $VERSION= '2.01';
+our $VERSION= '2.10';
 
 =head1 NAME
 
@@ -18,19 +18,23 @@ Egg::Plugin::SessionKit::Base::FileCache - Cache::FileCache for Session.
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
     plugin_session => {
-      base => {
-        name        => 'FileCache',
-        cache_root  => '/path/to/cache',
-        namespace   => 'sessions',
-        cache_depth => 3,
-        default_expires_in => (60* 60),
-        },
-      .......
-      ...
+      key_name => 'ss',
+      component=> [
+  
+        [ 'Base::FileCache' => {
+          cache_root  => '/path/to/cache',
+          namespace   => 'sessions',
+          cache_depth => 3,
+          default_expires_in => (60* 60),
+          } ],
+  
+        qw/ Bind::Cookie Store::Plain /,
+  
+        ],
       },
     );
 
@@ -44,56 +48,58 @@ The setting becomes an option to pass everything to L<Cache::FileCache>.
 
 Please refer to the document of L<Cache::FileCache>.
 
-=cut
-
-__PACKAGE__->mk_accessors('cache');
-
 =head1 METHODS
 
 =head2 startup
 
 The setting is checked.
 
-=cut
-sub startup {
-	my($class, $e, $conf)= @_;
-	my $base= $conf->{base} ||= {};
-	$base->{cache_root} ||= $e->config->{dir}{cache}
-	                    || die q{ I want 'cache' dir. };
-#	-w $base->{cache_root}
-#	   || die q{ There is no permission in 'cache_root'. };
-	$base->{namespace}          ||= 'sessions';
-	$base->{cache_depth}        ||= 3;
-	$base->{default_expires_in} ||= 60* 60;
-	$class->next::method($e, $conf);
-}
-
-sub TIEHASH {
-	my($ss)= shift->SUPER::TIEHASH(@_);
-	$ss->cache( Cache::FileCache->new($ss->config->{base}) );
-	$ss;
-}
-
 =head2 restore ( [SESSION_ID] )
 
 The session data is acquired.
-
-=cut
-sub restore {
-	my $ss= shift;
-	my $id= shift || return 0;
-	my $data= $ss->cache->get($id) || return 0;
-	$data->{session_session_id} ? $data: 0;
-}
 
 =head2 insert, update
 
 The session data is preserved.
 
+=head2 delete ( [SESSION_ID] )
+
+Remove cache SESSION_ID.
+
 =cut
-sub insert {
+
+sub startup {
+	my($class, $e, $conf)= @_;
+	my $cf= $conf->{base_filecache};
+	$cf->{cache_root} ||= $e->config->{dir}{cache}
+	                  || die q{ I want 'cache' dir. };
+	$cf->{namespace}   ||= 'sessions';
+	$cf->{cache_depth} ||= 3;
+	$cf->{default_expires_in} ||= 60* 60;
+	$class->mk_ro_accessors('cache');
+	$class->next::method($e, $conf);
+}
+sub TIEHASH {
+	my($ss)= shift->next::method(@_);
+	$ss->attr->{cache}=
+	   Cache::FileCache->new($ss->mod_conf->{base_filecache});
+	$ss;
+}
+sub restore {
 	my $ss= shift;
-	$ss->cache->set($ss->session_id, $ss->{session});
+	my $id= shift || return 0;
+	my $data= $ss->cache->get($id) || return 0;
+	$data->{session_id} ? $data: 0;
+}
+sub insert {
+	my($ss)= @_;
+	$ss->cache->set($ss->is_session_id, $ss->[0]);
+	$ss;
+}
+sub delete {
+	my $ss= shift;
+	my $id= shift || return 0;
+	$ss->cache->remove($id);
 	$ss;
 }
 *update= \&insert;

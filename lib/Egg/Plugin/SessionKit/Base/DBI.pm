@@ -2,13 +2,14 @@ package Egg::Plugin::SessionKit::Base::DBI;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBI.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: DBI.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 use Time::Piece::MySQL;
+use base qw/ Class::Data::Inheritable /;
 
-our $VERSION = '2.01';
+our $VERSION = '2.10';
 
 =head1 NAME
 
@@ -16,22 +17,26 @@ Egg::Plugin::SessionKit::DBI - Egg::Model::DBI for session.
 
 =head1 SYNOPSIS
 
-  use Egg qw/ SessionKit DBI::Transaction /;
+  use Egg qw/ DBI::Transaction SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
     MODEL => [ [ DBI => { ... } ] ],
     
     plugin_session => {
-      base => {
-        name       => 'DBI',
-        dbname     => 'sessions',
-        data_field => 'a_session',
-        time_field => 'lastmod',
-        },
-      .......
-      ...
+      key_name => 'ss',
+      component=> [
+  
+        [ 'Base::DBI' => {
+          dbname     => 'sessions',
+          data_field => 'a_session',
+          time_field => 'lastmod',
+          } ],
+  
+        qw/ Bind::Cookie Store::Base64 /,
+  
+        ],
       },
     );
 
@@ -76,96 +81,39 @@ Name of column that stores updated day and hour.
 
 Default is 'lastmod'.
 
-=cut
-
-__PACKAGE__->mk_accessors(qw/ dbh dbname datafield timefield /);
-
 =head1 METHODS
 
 =head2 startup
 
 The setting is checked.
 
-=cut
-sub startup {
-	my($class, $e, $conf)= @_;
-	$e->isa('Egg::Plugin::DBI::Transaction')
-	   || die q{ Please build in Egg::Plugin::DBI::Transaction. };
-	my $base= $conf->{base} ||= {};
-	$base->{dbname}     ||= $base->{db_name} ||= 'sessions';
-	$base->{data_field} ||= 'a_session';
-	$base->{time_field} ||= 'lastmod',
-	$class->next::method($e, $conf);
-}
+=head2 dbh
 
-sub TIEHASH {
-	my($ss)= shift->SUPER::TIEHASH(@_);
-	my $base= $ss->config->{base};
-	$ss->dbh($ss->e->dbh);
-	$ss->dbname($base->{dbname});
-	$ss->datafield($base->{data_field});
-	$ss->timefield($base->{time_field});
-	$ss;
-}
+The data base handler is returned.
 
 =head2 restore ( [SESSION_ID] )
 
 The session data is acquired.
 
-=cut
-sub restore {
-	my $ss= shift;
-	my $id= shift || return 0;
-	my($dbname, $datafield)= ($ss->dbname, $ss->datafield);
-	my $sesson;
-	my $sth= $ss->dbh->prepare
-	         (qq{ SELECT $datafield FROM $dbname WHERE id = ? });
-	$sth->execute($id);
-	$sth->bind_columns(\$sesson);
-	$sth->fetch; $sth->finish;
-	$sesson ? $ss->store_decode(\$sesson): 0;
-}
-
 =head2 insert
 
 New session data is added.
-
-=cut
-sub insert {
-	my($ss)= @_;
-	my($dbname, $datafield, $timefield)=
-	  ($ss->dbname, $ss->datafield, $ss->timefield);
-	$ss->dbh->do(
-	  qq{ INSERT INTO $dbname (id, $datafield, $timefield) VALUES (?, ?, ?) },
-	  undef, $ss->session_id, $ss->store_encode($ss->{session}),
-	         localtime(time)->mysql_datetime,
-	  );
-}
 
 =head2 update
 
 Existing session data is updated.
 
-=cut
-sub update {
-	my($ss)= @_;
-	my($dbname, $datafield, $timefield)=
-	  ($ss->dbname, $ss->datafield, $ss->timefield);
-	$ss->dbh->do(
-	  qq{ UPDATE $dbname SET $datafield = ?, $timefield = ? WHERE id = ? },
-	  undef, $ss->store_encode($ss->{session}),
-	         localtime(time)->mysql_datetime, $ss->session_id,
-	  );
-}
+=head2 delete ( [SESSION_ID] )
+
+The data of SESSION_ID is deleted.
+
+=head2 clear_sessions ( [TIME] )
+
+The session data before TIME is deleted.
 
 =head2 commit_ok
 
 Accessor to $e->commit_ok.
-
-=cut
-sub commit_ok {
-	shift->e->commit_ok(@_);
-}
 
 =head2 close
 
@@ -173,9 +121,79 @@ Rollback is set if there are signs where some errors occurred before shutting
 the session.
 
 =cut
-sub close {
+
+__PACKAGE__->mk_classdata('dbname');
+__PACKAGE__->mk_classdata('timefield');
+__PACKAGE__->mk_classdata('restore_sql');
+__PACKAGE__->mk_classdata('insert_sql');
+__PACKAGE__->mk_classdata('uodate_sql');
+
+sub startup {
+	my($class, $e, $conf)= @_;
+	$e->isa('Egg::Plugin::DBI::Transaction')
+	   || die q{ Please build in Egg::Plugin::DBI::Transaction. };
+	my $cf= $conf->{base_dbi};
+	my $dbname   = $cf->{dbname}     || 'sessions';
+	my $datafield= $cf->{data_field} || 'a_session';
+	my $timefield= $cf->{time_field} || 'lastmod';
+	$class->dbname($dbname);
+	$class->timefield($timefield);
+	$class->restore_sql(qq{SELECT ${datafield} FROM ${dbname} WHERE id = ?});
+	$class->insert_sql(qq{INSERT INTO ${dbname}}
+	  . qq{ (id, ${datafield}, ${timefield}) VALUES (?, ?, ?)});
+	$class->uodate_sql(qq{UPDATE ${dbname}}
+	  . qq{ SET ${datafield} = ?, ${timefield} = ? WHERE id = ?});
+	$class->next::method($e, $conf);
+}
+sub TIEHASH {
+	my($ss)= shift->next::method(@_);
+	$ss->attr->{dbh}= $ss->e->model('DBI')->dbh;
+	$ss;
+}
+sub dbh { $_[0]->attr->{dbh} }
+
+sub restore {
+	my $ss = shift;
+	my $id = shift || return 0;
+	my $sesson;
+	my $restore= $ss->dbh->prepare($ss->restore_sql);
+	$restore->execute($id);
+	$restore->bind_columns(\$sesson);
+	$restore->fetch; $restore->finish;
+	$sesson ? $ss->store_decode(\$sesson): 0;
+}
+sub insert {
 	my($ss)= @_;
-	$ss->rollback(1) if $ss->e->rollback_ok;
+	$ss->e->debug_out("# + session dbi insert : ". $ss->insert_sql);
+	$ss->dbh->do($ss->insert_sql, undef, $ss->is_session_id,
+	    $ss->store_encode($ss->[0]), localtime(time)->mysql_datetime );
+}
+sub update {
+	my($ss)= @_;
+	$ss->e->debug_out("# + session dbi update : ". $ss->uodate_sql);
+	$ss->dbh->do($ss->uodate_sql, undef, $ss->store_encode($ss->[0]),
+	    localtime(time)->mysql_datetime, $ss->session_id );
+}
+sub delete {
+	my $ss = shift;
+	my $id = shift || return 0;
+	my $dbname= $ss->dbname;
+	$ss->dbh->do(qq{DELETE FROM ${dbname} WHERE id = ?}, undef, $id);
+}
+sub clear_sessions {
+	my $ss= shift;
+	my $datetime = shift || die q{ I want time. };
+	my $dbname   = $ss->dbname;
+	my $timefield= $ss->timefield;
+	$ss->dbh->do(qq{DELETE FROM ${dbname} WHERE ${timefield} < ?},
+	         undef, localtime($datetime)->mysql_datetime );
+}
+sub commit_ok {
+	shift->e->commit_ok(@_);
+}
+sub DESTROY {
+	my($ss)= @_;
+	$ss->attr->{rollback}= 1 if $ss->e->rollback_ok;
 	$ss->next::method;
 }
 

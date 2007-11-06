@@ -2,7 +2,7 @@ package Egg::Plugin::SessionKit::Store::Base64;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base64.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: Base64.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
@@ -19,17 +19,15 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
-    MODEL => [ [ DBI => { ... } ] ],
     
     plugin_session => {
-      store => {
-        name       => 'Base64',
-        },
-      .......
-      ...
+      component=> [
+        [ 'Base::Module' => { ... } ],
+        qw/ Bind::Cookie Store::Base64 /,
+        ],
       },
     );
 
@@ -37,29 +35,28 @@ Egg::Plugin::SessionKit::Store::Base64 - Session data is made a text for preserv
 
 The means to make the session data a text for preservation is offered.
 
+=cut
+
+sub store_encode {
+	my $ss  = shift;
+	my $data= shift || return 0;
+	encode_base64(nfreeze($data));
+}
+sub store_decode {
+	my $ss  = shift;
+	my $data= shift || return 0;
+	thaw(decode_base64($$data));
+}
+
 =head1 METHODS
 
 =head2 store_encode
 
 The session data is made a text.
 
-=cut
-sub store_encode {
-	my $ss  = shift;
-	my $data= shift || return 0;
-	encode_base64(nfreeze($data));
-}
-
 =head2 store_decode
 
 The session data made a text is restored.
-
-=cut
-sub store_decode {
-	my $ss  = shift;
-	my $data= shift || return 0;
-	thaw(decode_base64($$data));
-}
 
 =head1 SEE ALSO
 

@@ -2,7 +2,7 @@ package Egg::Plugin::SessionKit::Store::Plain;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Plain.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: Plain.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
@@ -17,16 +17,15 @@ Egg::Plugin::SessionKit::Store::Plain - It treats without processing the session
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
     
     plugin_session => {
-      store => {
-        name       => 'Plain',
-        },
-      .......
-      ...
+      component=> [
+        [ 'Base::Module' => { ... } ],
+        qw/ Bind::Cookie Store::Plain /,
+        ],
       },
     );
 

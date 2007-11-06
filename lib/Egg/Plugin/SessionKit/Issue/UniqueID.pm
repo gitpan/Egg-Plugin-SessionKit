@@ -2,12 +2,12 @@ package Egg::Plugin::SessionKit::Issue::UniqueID;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: UniqueID.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: UniqueID.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '2.01';
+our $VERSION= '2.10';
 
 =head1 NAME
 
@@ -17,15 +17,15 @@ Egg::Plugin::SessionKit::Issue::UniqueID - Session id is issued by mod_unique_id
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
+    
     plugin_session => {
-      issue => {
-        name      => 'UniqueID',
-        },
-      .......
-      ...
+      component=> [
+        [ 'Base::Module' => { ... } ],
+        qw/ Issue::UniqueID Bind::Cookie Store::Plain /,
+        ],
       },
     );
 
@@ -33,23 +33,22 @@ Egg::Plugin::SessionKit::Issue::UniqueID - Session id is issued by mod_unique_id
 
 'mod_unique_id' of the Apache WEB server is used to issue session ID.
 
+=cut
+
+sub issue_id {
+	$ENV{UNIQUE_ID} || die q{ $ENV{UNIQUE_ID} variable cannot be acquired. };
+}
+sub issue_check_id { $_[1] }
+
 =head1 METHODS
 
 =head2 issue_id
 
 Session ID is issued.
 
-=cut
-sub issue_id {
-	$ENV{UNIQUE_ID} || die q{ $ENV{UNIQUE_ID} variable cannot be acquired. };
-}
-
 =head2 issue_check_id
 
 Effective session ID is not checked. Untouched through.
-
-=cut
-sub issue_check_id { $_[1] }
 
 =head1 SEE ALSO
 

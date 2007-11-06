@@ -1,59 +1,60 @@
 ---
 name: Egg-Plugin-SessionKit
-version: 2.01
+version: 2.10
 author:
   - 'Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>'
-abstract: Plugin that manages session.
+abstract: lib/Egg/Plugin/SessionKit.pm
 license: perl
 resources:
   license: http://dev.perl.org/licenses/
 requires:
   Cache::Cache: 1.05
-  Data::UUID: 1.14
+  Class::Data::Inheritable: 0.06
+  Digest::MD5: 2.36
   Digest::SHA1: 2.11
-  Egg::Model::DBIC: 2
-  Egg::Release: 2
+  Egg::Plugin::IxHash: 2.03
+  Egg::Release: 2.25
   MIME::Base64: 3.07
-  Storable: 2.16
+  Test::More: 0
   Test::Perl::Critic: 0
   Test::Pod: 0
   Test::Pod::Coverage: 0
-  Test::Simple: 0
 provides:
   Egg::Plugin::SessionKit:
     file: lib/Egg/Plugin/SessionKit.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Base::DBI:
     file: lib/Egg/Plugin/SessionKit/Base/DBI.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Base::DBIC:
     file: lib/Egg/Plugin/SessionKit/Base/DBIC.pm
     version: 2.01
   Egg::Plugin::SessionKit::Base::FileCache:
     file: lib/Egg/Plugin/SessionKit/Base/FileCache.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Bind::Cookie:
     file: lib/Egg/Plugin/SessionKit/Bind/Cookie.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Issue::MD5:
     file: lib/Egg/Plugin/SessionKit/Issue/MD5.pm
-    version: 2.01
-  Egg::Plugin::SessionKit::Issue::SHA1:
-    file: lib/Egg/Plugin/SessionKit/Issue/SHA1.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Issue::UUID:
     file: lib/Egg/Plugin/SessionKit/Issue/UUID.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Issue::UniqueID:
     file: lib/Egg/Plugin/SessionKit/Issue/UniqueID.pm
-    version: 2.01
+    version: 2.10
   Egg::Plugin::SessionKit::Store::Base64:
     file: lib/Egg/Plugin/SessionKit/Store/Base64.pm
     version: 2.01
   Egg::Plugin::SessionKit::Store::Plain:
     file: lib/Egg/Plugin/SessionKit/Store/Plain.pm
     version: 2.01
+  Egg::Plugin::SessionKit::base:
+    file: lib/Egg/Plugin/SessionKit.pm
   Egg::Plugin::SessionKit::handler:
+    file: lib/Egg/Plugin/SessionKit.pm
+  Egg::Plugin::SessionKit::handler::TieHash:
     file: lib/Egg/Plugin/SessionKit.pm
 generated_by: Module::Build version 0.2805
 meta-spec:

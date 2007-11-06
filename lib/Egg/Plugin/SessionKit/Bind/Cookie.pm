@@ -2,12 +2,12 @@ package Egg::Plugin::SessionKit::Bind::Cookie;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Cookie.pm 159 2007-05-24 08:38:09Z lushe $
+# $Id: Cookie.pm 214 2007-11-06 13:51:19Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '2.01';
+our $VERSION= '2.10';
 
 =head1 NAME
 
@@ -17,17 +17,22 @@ Egg::Plugin::SessionKit::Bind::Cookie - Session ID delivery by Cookie.
 
   use Egg qw/ SessionKit /;
   
-  __PACKAGE__->mk_eggstartup(
+  __PACKAGE__->egg_startup(
     .......
     ...
+    
     plugin_session => {
-      bind => {
-        name          => 'Cookie',
-        cookie_name   => 'sid',
-        cookie_path   => '/',
-        cookie_domain => 'www.hoge.domain.name',
-        cookie_secure => 1,
-        },
+      component=> [
+        [ 'Base::Module' => { ... } ],
+        [ 'Bind::Cookie' => {
+          cookie_name   => 'sid',
+          cookie_path   => '/',
+          cookie_domain => 'www.hoge.domain.name',
+          cookie_expires=> '+1d',
+          cookie_secure => 1,
+          } ],
+        qw/ Store::Plain /,
+        ],
       },
     );
 
@@ -60,54 +65,51 @@ Validity term of Cookie.
 
 You will not set it usually.
 
+=cut
+sub startup {
+	my($class, $e, $conf)= @_;
+	my $cf= $conf->{bind_cookie};
+	$cf->{cookie_name} ||= 'ss';
+	$cf->{cookie_path} ||= '/';
+	$cf->{cookie_secure} = 1 unless defined($cf->{cookie_secure});
+	$class->next::method($e, $conf);
+}
+sub get_bind_data {
+	my $ss = shift;
+	my $key= shift || $ss->mod_conf->{bind_cookie}{cookie_name};
+	$ss->e->request->cookie_value($key) || $ss->is_session_id || 0;
+}
+sub set_bind_data {
+	my $ss  = shift;
+	my $key = shift || "";
+	my $id  = shift || $ss->is_session_id;
+	my $args= shift || {};
+	my $cf  = $ss->mod_conf->{bind_cookie};
+	$key= $cf->{cookie_name} if $cf->{cookie_name};
+	$args->{value}= $id;
+	$args->{path} ||= $cf->{cookie_path};
+	$args->{domain} = $cf->{cookie_domain}
+	   if (! $args->{domain} and $cf->{cookie_domain});
+	$args->{expires}= $cf->{cookie_expires}
+	   if (! $args->{expires} and $cf->{cookie_expires});
+	$args->{secure}= 1
+	   if ($cf->{cookie_secure} and $ss->e->request->secure);
+	$ss->e->response->cookies->{$key}= $args;
+}
+
 =head1 METHODS
 
 =head2 startup
 
 The setting is checked.
 
-=cut
-sub startup {
-	my($class, $e, $conf)= @_;
-	my $bind= $conf->{bind} ||= {};
-	$bind->{cookie_name} ||= 'ss';
-	$bind->{cookie_path} ||= '/';
-	$bind->{cookie_secure} = 1 unless defined($bind->{cookie_secure});
-	$class->next::method($e, $conf);
-}
-
 =head2 get_bind_data
 
 Session id is received from Cookie.
 
-=cut
-sub get_bind_data {
-	my $ss = shift;
-	my $key= shift || $ss->config->{bind}{cookie_name};
-	$ss->e->request->cookie_value($key) || 0;
-}
-
 =head2 set_bind_data
 
 It prepares it. bury session id under the response header
-
-=cut
-sub set_bind_data {
-	my $ss  = shift;
-	my $conf= $ss->config->{bind};
-	my $key = shift || $conf->{cookie_name};
-	my $id  = shift || die q{ I want bind_id };
-	my $args= shift || {};
-	$args->{value}= $id;
-	$args->{path} ||= $conf->{cookie_path};
-	$args->{domain} = $conf->{cookie_domain}
-	  if (! $args->{domain} and $conf->{cookie_domain});
-	$args->{expires}= $conf->{cookie_expires}
-	  if (! $args->{expires} and $conf->{cookie_expires});
-	$args->{secure}= 1
-	  if ($conf->{cookie_secure} and $ss->e->request->secure);
-	$ss->e->response->cookies->{$key}= $args;
-}
 
 =head1 SEE ALSO
 
