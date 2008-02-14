@@ -10,15 +10,14 @@ my $builder = Module::Build->new(
 
   requires => {
 
-    'Cache::Cache'             => 1.05,
-    'Class::Data::Inheritable' => 0.06,
-#    'Data::UUID'               => 1.14,
-    'Digest::MD5'              => 2.36,
-    'Digest::SHA1'             => 2.11,
-    'MIME::Base64'             => 3.07,
-    'Egg::Release'             => 2.25,
-    'Egg::Plugin::IxHash'      => 2.03,
-#    'Egg::Model::DBIC'         => 2.03,
+    'Egg::Release'         => '3.00',
+    'Egg::Release::DBI'    => '0.01',
+    'Egg::Release::DBIC'   => '0.01',
+    'Cache::Cache'         => '1.05',
+    'Data::UUID'           => '1.14',
+    'Storable'             => '2.18',
+    'Convert::UU'          => '0.52',
+    'Time::Piece::MySQL'   => '0.05',
 
     'Test::More'           => 0,
     'Test::Pod'            => 0,
