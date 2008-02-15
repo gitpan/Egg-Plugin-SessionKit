@@ -11,11 +11,11 @@ eval{ require Egg::Release::DBI };
 if ($@) {
 	plan skip_all=> "Egg::Release::DBI is not installed.";
 } else {
-	my $attr= Egg::Helper->helper_get_dbi_attr;
-	unless ($attr->{dsn}) {
+	my $env= Egg::Helper->helper_get_dbi_attr;
+	unless ($env->{dsn}) {
 		plan skip_all=> "I want setup of environment variable.";
 	} else {
-		test($attr);
+		test($env);
 	}
 }
 

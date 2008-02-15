@@ -1,6 +1,6 @@
 ---
 name: Egg-Plugin-SessionKit
-version: 3.00
+version: 3.01
 author:
   - 'Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>'
 abstract: lib/Egg/Plugin/SessionKit.pm
@@ -84,7 +84,7 @@ provides:
     version: 0.01
   Egg::Plugin::SessionKit:
     file: lib/Egg/Plugin/SessionKit.pm
-    version: 3.00
+    version: 3.01
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

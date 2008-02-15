@@ -2,13 +2,13 @@ package Egg::Plugin::SessionKit;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: SessionKit.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: SessionKit.pm 260 2008-02-15 14:04:33Z lushe $
 #
 use strict;
 use warnings;
 use base qw/ Egg::Plugin::Session /;
 
-our $VERSION= '3.00';
+our $VERSION= '3.01';
 
 1;
 

@@ -1,5 +1,8 @@
 Revision history for Perl extension .
 
-0.01  Thu Feb  7 15:35:31 2008
+3.01  2008/02/15
+	- It was made not to fail because of the package test.
+
+3.00  Thu Feb  7 15:35:31 2008
 	- original version; created by Egg::Helper::Build::Module v3.00
 	   with module name Egg::Plugin::SessionKit

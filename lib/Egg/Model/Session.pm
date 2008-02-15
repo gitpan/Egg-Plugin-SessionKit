@@ -2,7 +2,7 @@ package Egg::Model::Session;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Session.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Session.pm 260 2008-02-15 14:04:33Z lushe $
 #
 use strict;
 use warnings;
@@ -52,7 +52,7 @@ sub _setup {
 	push @{"${base}::ISA"}, 'Egg::Base';
 	$base->mk_classdata($_) for qw/ default labels /;
 	my $labels= $base->labels( $e->ixhash );
-	for (sort (grep /.+\.pm$/, <$path/*>)) {
+	for (sort (grep /.+\.pm$/, <$path/*>)) {  ## no critic.
 		m{([^\\\/\:]+)\.pm$} || next;
 		my $name= $1;
 		my $dc  = "${base}::$name";
