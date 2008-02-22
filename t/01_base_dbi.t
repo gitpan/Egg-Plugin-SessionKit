@@ -167,8 +167,9 @@ $e->debug_end;
 
   };
 
-$dbh->do(qq{ DROP TABLE $table });
+$@ and warn $@;
 
+$dbh->do(qq{ DROP TABLE $table });
 $dbh->disconnect;
 
 }

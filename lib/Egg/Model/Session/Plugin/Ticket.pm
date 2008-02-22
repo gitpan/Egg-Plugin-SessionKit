@@ -2,14 +2,14 @@ package Egg::Model::Session::Plugin::Ticket;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Ticket.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Ticket.pm 264 2008-02-22 08:53:00Z lushe $
 #
 use strict;
 use warnings;
 use Carp qw/ croak /;
 use Digest::SHA1 qw/ sha1_hex /;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub _setup {
 	my($class, $e)= @_;
@@ -18,62 +18,77 @@ sub _setup {
 }
 sub ticket {
 	my $self  = shift;
-	my $name  = shift || 'default';
+	my($name, $flag)= @_ ? do {
+		@_== 1 ? do {
+			$_[0]=~m{^[01]$} ? ($self->__ticket_name, $_[0]): (shift, undef);
+		  }: @_;
+	  }: ($self->__ticket_name, undef);
 	my $ticket= $self->data->{_session_ticket} ||= {};
-	return ($ticket->{$name} || "") unless defined($_[0]));
-	$self->is_update(1);
-	unless ($_[0]) {
-		my $i= $ticket->{$name} || return 0;
-		$self->e->debug_out("# + !! Ticket '$name' is remove. [$i]");
-		return delete($ticket->{$name}) ;
+	unless (defined($flag)) {
+		return $ticket->{$name} ? $ticket->{$name}[0]: "";
+	}
+	unless ($flag) {
+		my $i= $ticket->{$name} || return "";
+		$self->e->debug_out("# + !! Ticket '$name' is remove. [$i->[0]]");
+		delete $ticket->{$name};
+		return "";
 	}
 	my $id= substr(
 	  sha1_hex( time. $$. rand(1000). {} ), 0, $self->config->{ticket_length},
 	  );
 	$ticket->{$name}= [ $id , time ];
+	$self->is_update(1);
 	$self->e->debug_out("# + Ticket '$name' is create. [$id]");
 	$id;
 }
 sub ticket_check {
 	my $self  = shift;
-	my $name  = shift || 'default';
-	my $value = shift || croak q{I want ticket value.};
+	my($name, $value)= @_ ? do {
+		@_== 1 ? ($self->__ticket_name, shift) : @_;
+	  }: do {
+		my $i= $self->valid_ticket(shift) || return -3;
+		( $self->__ticket_name, $i );
+	  };
 	my $ticket= $self->data->{_session_ticket} || return -2;
-	unless ($ticket->{$name}) {
+	my $id= $ticket->{$name} || return do {
 		$self->e->debug_out("# + Ticket '$name' is unset.");
-		return -1;
-	}
-	return $ticket->{$name}[0] eq $value
-	   ? do { $self->e->debug_out("# + Ticket '$name' is match."); 1 }
-	   : do { $self->e->debug_out("# + !! Ticket '$name' is unmatch."); 0 };
+		-1;
+	  };
+	return $id->[0] eq $value ? do {
+		$self->e->debug_out("# + Ticket '$name' is match. [$value]");
+		1;
+	  }: do {
+		$self->e->debug_out
+		      ("# + !! Ticket '$name' is unmatch. [$id->[0]] - [$value]");
+		0;
+	  };
+}
+sub ticket_remove {
+	my $self  = shift;
+	my $name  = shift || $self->__ticket_name;
+	my $ticket= $self->data->{_session_ticket} || return 0;
+	my $id    = $ticket->{$name} || return 0;
+	$self->e->debug_out("# + Ticket '$name' is remove. [$id->[0]]");
+	delete $ticket->{$name};
+	$self->is_update(1);
+	1;
 }
 sub ticket_clear {
-	my $self   = shift;
-	my $name   = shift || 0;
-	my $session= $self->data;
-	if ($name) {
-		if ($session->{_session_ticket}{$name}) {
-			$self->e->debug_out("# + Ticket '$name' is clear.");
-			delete($session->{_session_ticket}{$name});
-			$self->is_update(1);
-		}
-	} else {
-		if ($session->{_session_ticket}) {
-			$self->e->debug_out("# + !! Ticket '$name' is all clear.");
-			$self->DELETE('_session_ticket');
-		}
-	}
-	$e;
+	my $self  = shift;
+	my $ticket= $self->data->{_session_ticket} || return 0;
+	my $count = scalar(keys %$ticket);
+	$self->e->debug_out("# + !! Ticket is all clear.");
+	$self->DELETE('_session_ticket');
+	$count;
 }
 sub ticket_purge {
-	my $self   = shift;
-	my $lapse  = shift || 60* 10;   # default is 10 minute.
-	my $session= $self->data;
-	my $ticket = $session->{_session_ticket} || return 0;
+	my $self  = shift;
+	my $lapse = shift || 60* 10;   # default is 10 minute.
+	my $ticket= $self->data->{_session_ticket} || return 0;
 	$lapse= time- $lapse;
 	my $count;
 	while (my($name, $v)= each %$ticket) {
-		next if $v->[1] > $lapse;
+		next if $v->[1] >= $lapse;
 		delete $ticket->{$name};
 		++$count;
 	}
@@ -82,8 +97,15 @@ sub ticket_purge {
 		$self->e->debug_out("# + !! $count tickets are deleted.");
 	}
 	$self->DELETE('_session_ticket') unless %$ticket;
-	$e;
+	$count || 0;
 }
+sub valid_ticket {
+	my $self = shift;
+	my $value= shift || return 0;
+	my $len  = $self->config->{ticket_length};
+	$value=~m{^[a-f0-9]{$len}$} ? 1: 0;
+}
+sub __ticket_name { $_[0]->e->request->path || 'default' }
 
 1;
 
@@ -101,6 +123,51 @@ Egg::Model::Session::Plugin::Ticket - Plugin for session to handle ticket tempor
    Plugin::Ticket
    .....
    );
+
+  my $session= $e->model('session_label_name');
+  
+  # The ticket is temporarily issued.
+  my $ticket= $session->ticket(1);
+  
+  # The ticket name is specified.
+  my $ticket= $session->ticket( myticket => 1 );
+  
+  # The ticket received from the form is checked.
+  my $result= $session->ticket_check;
+  if ($result > 0) {
+     
+     ...... The ticket is corresponding.
+     
+  } else {
+     my $error= $result== -3 ? 'The ticket cannot be received or it makes an error the format.'
+                $result== -2 ? 'The ticket is not set. # 1'
+                $result== -1 ? 'The ticket is not set. # 2'
+                               'The ticket is not corresponding.';
+     return $e->error($error);
+  }
+  
+  # The format of the ticket is checked.
+  if ($session->valid_ticket($ticket_value)) {
+     ...... Correct ticket.
+  } else {
+     ...... The problem is in the format of the ticket.
+  }
+  
+  # The ticket is temporarily deleted.
+  $session->ticket(0);
+    Or
+  $session->ticket_remove;
+  
+  # It deletes it specifying the ticket name.
+  $session->ticket( myticket => 0);
+    Or
+  $session->ticket_remove('myticket');  
+  
+  # All tickets are annulled.
+  $session->ticket_clear;
+  
+  # The ticket that passes 30 minutes or more is annulled.
+  $session->ticket_purge( 30 * 60 );
 
 =head1 DESCRIPTION
 
@@ -149,6 +216,14 @@ invalidate the ticket temporarily.
   # The ticket is temporarily invalid.
   $session->ticket( ticket_name => 0 );
 
+When ID_KEY is omitted, request URI is used as a key.
+
+  # Temporary issue of ticket.
+  my $ticket_id = $session->ticket(1);
+    
+  # The ticket is temporarily invalid.
+  $session->ticket(0);
+
 =head2 ticket_check ([ID_KEY], [TICKET_ID])
 
 It confirms whether the ticket is temporarily corresponding to the existing one
@@ -162,6 +237,7 @@ unspecification, the exception is generated.
 
 The result returns by the following numerical values.
 
+  -3 = The ticket for the confirmation cannot be received or it is in the format the problem.
   -2 = When the data confidence to become the origin of the ticket preservation is not found temporary.
   -1 = When data concerning ID_KEY is not preserved.
    0 = When not agreeing.
@@ -174,34 +250,41 @@ The result returns by the following numerical values.
      ... The ticket is a code when not agreeing.
   }
 
+When ID_KEY is omitted, request URI is used as a key.
+
+  if ( 0 < $session->ticket_check($e->request->param('ticket_name')) {
+     ... The ticket is a code when agreeing.
+  } else {
+     ... The ticket is a code when not agreeing.
+  }
+
+=head2 ticket_remove ([ID_KEY])
+
+The ticket is temporarily deleted specification.
+
+0 returns when the ticket to be deleted is not registered.
+
+  $session->ticket_remove('ticket_name');
+
+When ID_KEY is omitted, request URI is used as a key.
+
+  $session->ticket_remove;
+
+One similar movement is done to pass 0 to the flag of 'ticket' method, and after
+it deletes it, here sets 'is_update'.
+Therefore, please use here when you want surely to delete it.
+
 =head2 ticket_clear ([ID_KEY])
 
-The ticket has been temporarily deleted of the issue.
+All registered tickets are annulled.
+And, the annulled number of tickets is returned.
 
-Only the relating key data annuls all the preserved data at the unspecification
- when ID_KEY is specified.
-
-  # The delete key is specified.
-  $session->ticket_clear('ticket_name');
-  
-  # The ticket all is temporarily deleted.
-  $session->ticket_clear;
-
-The method here makes 'is_update' effective though a thing similar only as for 
-sending of the annulment of ID_KEY specifying it the flag to 'ticket' method 
-can be done.
-Therefore, data might actually remain in the session only by 'ticket' method.
-Please use the method here when you want temporarily to invalidate the ticket 
-surely that.
-
-  # If it is a situation in which the session is not preserved by another, the 
-  # ticket is not temporarily deleted from real data because 'is_update' is not
-  # made effective.
-  $session->ticket( ticket_name => 0 );
+  my $count= $session->ticket_clear;
 
 =head2 ticket_purge ([TIME_VALUE])
 
 TIME_VALUE is deleted and passage annuls all tickets temporarily.
+And, the annulled number of tickets is returned.
 
   # All the passage of ten minutes is deleted.
   $session->ticket_purge( 10* 60 );
@@ -211,6 +294,10 @@ TIME_VALUE is deleted and passage annuls all tickets temporarily.
   
   # All the passage of a 1 day is deleted.
   $session->ticket_purge( 1* 24* 60* 60 );
+
+=head2 valid_ticket ([TICKET_ID])
+
+The format of TICKET_ID is checked and the result is returned.
 
 =head1 SEE ALSO
 

@@ -2,12 +2,12 @@ package Egg::Model::Session;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Session.pm 260 2008-02-15 14:04:33Z lushe $
+# $Id: Session.pm 264 2008-02-22 08:53:00Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub _setup {
 	my($class, $e)= @_;
@@ -16,18 +16,13 @@ sub _setup {
 }
 sub _finish {
 	my($self, $e)= @_;
-	$self->_hook($e, '_finish');
+	$self->any_hook(qw/ Model::Session _finish /);
 	$self->next::method($e);
 }
 sub _finalize_error {
 	my($self, $e)= @_;
-	$self->_hook($e, '_finalize_error');
+	$self->any_hook(qw/ Model::Session _finalize_error /);
 	$self->next::method($e);
-}
-sub _hook {
-	my($self, $e, $method)= @_;
-	my $handlers= $e->{session_handlers} || return 0;
-	$_->context->$method($e) for values %$handlers;
 }
 
 package Egg::Model::Session::handler;

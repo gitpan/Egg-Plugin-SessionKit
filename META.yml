@@ -1,6 +1,6 @@
 ---
 name: Egg-Plugin-SessionKit
-version: 3.01
+version: 3.02
 author:
   - 'Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>'
 abstract: lib/Egg/Plugin/SessionKit.pm
@@ -26,7 +26,7 @@ provides:
     version: 0.01
   Egg::Model::Session:
     file: lib/Egg/Model/Session.pm
-    version: 0.01
+    version: 0.02
   Egg::Model::Session::Base::DBI:
     file: lib/Egg/Model/Session/Base/DBI.pm
     version: 0.01
@@ -70,7 +70,7 @@ provides:
     version: 0.01
   Egg::Model::Session::Plugin::Ticket:
     file: lib/Egg/Model/Session/Plugin/Ticket.pm
-    version: 0.01
+    version: 0.02
   Egg::Model::Session::Store::Base64:
     file: lib/Egg/Model/Session/Store/Base64.pm
     version: 0.01
@@ -84,7 +84,7 @@ provides:
     version: 0.01
   Egg::Plugin::SessionKit:
     file: lib/Egg/Plugin/SessionKit.pm
-    version: 3.01
+    version: 3.02
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

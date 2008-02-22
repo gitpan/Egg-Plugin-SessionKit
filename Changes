@@ -1,5 +1,8 @@
 Revision history for Perl extension .
 
+3,02  2008/02/22
+	- fixed for Egg::Model::Session::Plugin::Ticket.
+
 3.01  2008/02/15
 	- It was made not to fail because of the package test.
 

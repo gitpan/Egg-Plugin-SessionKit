@@ -59,6 +59,7 @@ t/20_store_uuencode.t
 t/30_plugin_absoluteip.t
 t/31_plugin_agreeagent.t
 t/32_plugin_cclassip.t
+t/33_plugin_ticket.t
 t/50_helper.t
 t/89_pod.t
 t/98_perlcritic.t
