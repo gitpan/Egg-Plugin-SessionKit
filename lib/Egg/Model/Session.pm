@@ -2,7 +2,7 @@ package Egg::Model::Session;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Session.pm 264 2008-02-22 08:53:00Z lushe $
+# $Id: Session.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
@@ -14,9 +14,9 @@ sub _setup {
 	Egg::Model::Session::handler->_setup($e);
 	$class->next::method($e);
 }
-sub _finish {
+sub _output {
 	my($self, $e)= @_;
-	$self->any_hook(qw/ Model::Session _finish /);
+	$self->any_hook(qw/ Model::Session _output /);
 	$self->next::method($e);
 }
 sub _finalize_error {

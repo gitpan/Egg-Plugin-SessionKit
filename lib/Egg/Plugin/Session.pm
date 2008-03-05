@@ -2,18 +2,18 @@ package Egg::Plugin::Session;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Session.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Session.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
 use Carp qw/ croak /;
 use Digest::SHA1 qw/ sha1_hex /;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub _setup {
 	my($e)= @_;
-	$e->model_manager->is_model('session')
+	$e->is_model('session')
 	    || die q{I want setup of 'Egg::Model::Session'.};
 	$e->next::method;
 }

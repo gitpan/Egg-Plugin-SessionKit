@@ -2,7 +2,7 @@ package Egg::Model::Session::Bind::Cookie;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Cookie.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Cookie.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
@@ -25,8 +25,8 @@ sub get_bind_data {
 sub set_bind_data {
 	my($self, $key, $id)= @_;
 	my %cookie= %{$self->config->{cookie}};
-	$cookie{name} ||= $key;
-	$self->e->response->cookie( %cookie, value=> $id );
+	my $name  = $cookie{name} || $key;
+	$self->e->response->cookie( $name => { %cookie, value=> $id } );
 }
 
 1;

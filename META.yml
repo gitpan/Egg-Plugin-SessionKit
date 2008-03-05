@@ -1,6 +1,6 @@
 ---
 name: Egg-Plugin-SessionKit
-version: 3.02
+version: 3.03
 author:
   - 'Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>'
 abstract: lib/Egg/Plugin/SessionKit.pm
@@ -23,13 +23,13 @@ requires:
 provides:
   Egg::Helper::Model::Session:
     file: lib/Egg/Helper/Model/Session.pm
-    version: 0.01
+    version: 0.02
   Egg::Model::Session:
     file: lib/Egg/Model/Session.pm
     version: 0.02
   Egg::Model::Session::Base::DBI:
     file: lib/Egg/Model/Session/Base/DBI.pm
-    version: 0.01
+    version: 0.03
   Egg::Model::Session::Base::DBIC:
     file: lib/Egg/Model/Session/Base/DBIC.pm
   Egg::Model::Session::Base::FileCache:
@@ -55,10 +55,10 @@ provides:
     version: 0.01
   Egg::Model::Session::Manager::Base:
     file: lib/Egg/Model/Session/Manager/Base.pm
-    version: 0.01
+    version: 0.02
   Egg::Model::Session::Manager::TieHash:
     file: lib/Egg/Model/Session/Manager/TieHash.pm
-    version: 0.01
+    version: 0.02
   Egg::Model::Session::Plugin::AbsoluteIP:
     file: lib/Egg/Model/Session/Plugin/AbsoluteIP.pm
     version: 0.01
@@ -81,10 +81,10 @@ provides:
     file: lib/Egg/Model/Session.pm
   Egg::Plugin::Session:
     file: lib/Egg/Plugin/Session.pm
-    version: 0.01
+    version: 0.02
   Egg::Plugin::SessionKit:
     file: lib/Egg/Plugin/SessionKit.pm
-    version: 3.02
+    version: 3.03
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

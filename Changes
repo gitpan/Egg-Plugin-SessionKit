@@ -1,5 +1,12 @@
 Revision history for Perl extension .
 
+3,03  2008/02/22
+	- fixed for Egg::Helper::Model::Session.
+	- bugfix for Egg::Model::Session.
+	- bugfix for Egg::Plugin::Session.
+	- fixed for Egg::Model::Session::Base::DBI.
+	- bugfix for Egg::Model::Session::Manager::TieHash.
+
 3,02  2008/02/22
 	- fixed for Egg::Model::Session::Plugin::Ticket.
 

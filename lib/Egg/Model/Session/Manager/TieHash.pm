@@ -2,7 +2,7 @@ package Egg::Model::Session::Manager::TieHash;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: TieHash.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: TieHash.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Tie::Hash;
 use Carp qw/ croak /;
 use base qw/ Egg::Component /;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 our @ISA;
 
 push @ISA, 'Tie::ExtraHash';
@@ -97,8 +97,10 @@ sub accept_session_id {
 	$self->create_session_id;
 }
 sub output_session_id {
-	my($self)= @_;
-	$self->set_bind_data($self->config->{param_name}, $self->session_id);
+	my $self= shift;
+	my $id  = shift || $self->session_id;
+	$self->set_bind_data($self->config->{param_name}, $id);
+	$id;
 }
 sub create_session_id {
 	my($self)= @_;
@@ -132,8 +134,8 @@ sub close {
 			my $method= $self->is_new ? 'insert': 'update';
 			$self->e->debug_out("# + session ${method}: $id");
 			$self->$method($self->store_encode);
-			$self->set_bind_data($self->config->{param_name}, $id)
-			    if $self->is_new;
+			$self->set_bind_data
+			   ($self->config->{param_name}, $id) if $self->is_new;
 		}
 		$self->[0]= undef;
 		$self->is_update(0);
@@ -145,7 +147,7 @@ sub _finalize_error {
 	$_[0]->is_update(0);
 	@_;
 }
-sub _finish { &close }
+sub _output { &close }
 
 sub DESTROY { &close }
 

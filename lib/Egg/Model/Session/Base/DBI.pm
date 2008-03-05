@@ -2,16 +2,14 @@ package Egg::Model::Session::Base::DBI;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: DBI.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: DBI.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
 use Carp qw/ croak /;
 use Time::Piece::MySQL;
 
-our $VERSION= '0.01';
-
-sub _dbh { $_[0]->attr->{dbh} }
+our $VERSION= '0.03';
 
 sub _setup {
 	my($class, $e)= @_;
@@ -41,20 +39,28 @@ sub _setup {
 	*{"${class}::_restore"}= ($c->{prepare_cache} or $c->{prepare_cached})
 	     ? sub { $_[0]->_dbh->prepare_cached($restore_sql) }
 	     : sub { $_[0]->_dbh->prepare($restore_sql) };
-	*{"${class}::_commit"}= $e->isa('Egg::Plugin::EasyDBI') ? sub {
-		$_[0]->e->dbh($_[0]->_label)->commit_ok(1) if $_[1];
-	  }: sub {
-		$_[1] ? $_[0]->_dbh->commit
-		      : $_[0]->_dbh->rollback;
-	  };
-
+	if ($e->isa('Egg::Plugin::EasyDBI')) {
+		*{"${class}::_commit"}= sub {
+			if ($_[1]) {
+				my $db= $_[0]->e->dbh($_[0]->_label) || return 0;
+				$db->commit_ok(1);
+			}
+		  };
+		*{"${class}::_dbh"}= sub {
+			$_[0]->attr->{dbh} || do {
+				my $db= $_[0]->e->dbh($_[0]->_label) || return 0;
+				$db->dbh;
+			  };
+		  };
+	} else {
+		*{"${class}::_commit"}= sub {
+			$_[1] ? $_[0]->_dbh->commit
+			      : $_[0]->_dbh->rollback;
+		  };
+		*{"${class}::_dbh"}= sub { $_[0]->e->model($_[0]->_label)->dbh; };
+	}
 	$class->_label($c->{label} || 'dbi::main');
 	$class->next::method($e);
-}
-sub TIEHASH {
-	my($self)= shift->next::method(@_);
-	$self->attr->{dbh}= $self->e->model($self->_label)->dbh;
-	$self;
 }
 sub restore {
 	my $self= shift;
@@ -93,9 +99,9 @@ sub _do {
 	my $sql = shift;
 	my $result;
 	eval {
-		$self->e->debug_out("# + session Store::DBI : $sql");
+		$self->e->debug_out("# + session Base::DBI : $sql");
 		$result= $self->_dbh->do($sql, undef, @_);
-		$self->_commit;
+		$self->_commit(1);
 	  };
 	return $result unless $@;
 	$self->_dbh->rollback;

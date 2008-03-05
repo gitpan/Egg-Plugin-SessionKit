@@ -2,14 +2,14 @@ package Egg::Model::Session::Manager::Base;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Base.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Base.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
 use Class::C3;
 use base qw/ Egg::Base /;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 our $AUTOLOAD;
 
@@ -37,12 +37,12 @@ sub context {
 }
 sub close_session {
 	my($self)= @_;
-	my $e= $self->context->e;
-	my $handlers= $e->{session_handlers} || return $self;
+	my $context= $self->context || return $self;
+	my $handlers= $context->e->{session_handlers} || return $self;
 	my $class= ref $self;
 	return $self unless $handlers->{$class};
 	delete $handlers->{$class};
-	$e->model_manager->reset_context($self->label_name);
+	$context->e->model_manager->reset_context($self->label_name);
 	$self->context->close;
 	$self;
 }

@@ -2,12 +2,12 @@ package Egg::Helper::Model::Session;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: Session.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: Session.pm 303 2008-03-05 07:47:05Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub _start_helper {
 	my($self)= @_;
@@ -115,11 +115,11 @@ value: |
     param_name => 'ss',
     );
   
-  __PACKAGE__->startup(
+  __PACKAGE__->startup qw/
     Base::FileCache
     Bind::Cookie
     ID::SHA1
-    );
+    /;
   
   package <e.module_distname>::TieHash;
   use strict;
