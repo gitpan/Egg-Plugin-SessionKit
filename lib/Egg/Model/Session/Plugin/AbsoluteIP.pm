@@ -2,18 +2,20 @@ package Egg::Model::Session::Plugin::AbsoluteIP;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: AbsoluteIP.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: AbsoluteIP.pm 322 2008-04-17 12:33:58Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub init_session {
 	my($self)= shift->next::method;
 	if (my $ip= $self->data->{ipaddr}) {
-		return $self->_remake_session
-		       unless $ip eq $self->e->request->address;
+		$ip eq $self->e->request->address || return do {
+			$self->delete($self->session_id);
+			$self->_remake_session;
+		  };
 	} else {
 		$self->data->{ipaddr}= $self->e->request->address;
 	}

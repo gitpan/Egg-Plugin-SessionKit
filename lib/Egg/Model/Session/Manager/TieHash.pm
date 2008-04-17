@@ -2,7 +2,7 @@ package Egg::Model::Session::Manager::TieHash;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: TieHash.pm 303 2008-03-05 07:47:05Z lushe $
+# $Id: TieHash.pm 322 2008-04-17 12:33:58Z lushe $
 #
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Tie::Hash;
 use Carp qw/ croak /;
 use base qw/ Egg::Component /;
 
-our $VERSION= '0.02';
+our $VERSION= '0.03';
 our @ISA;
 
 push @ISA, 'Tie::ExtraHash';
@@ -31,10 +31,13 @@ sub startup    { @_ }
 			$self->attr->{$accessor}= shift;
 		  };
 	}
-	for my $accessor (qw/ restore insert update
-	       get_bind_data set_bind_data issue_session_id make_session_id /) {
+	for my $accessor
+	   (qw/ restore insert update issue_session_id make_session_id /) {
 		*{__PACKAGE__."::$accessor"}=
 		  sub { die qq{'$accessor' There is no absolute method.} };
+	}
+	for my $accessor (qw/ get_bind_data set_bind_data /) {
+		*{__PACKAGE__."::$accessor"}= sub {};
 	}
   };
 

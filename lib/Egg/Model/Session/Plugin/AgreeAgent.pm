@@ -2,18 +2,20 @@ package Egg::Model::Session::Plugin::AgreeAgent;
 #
 # Masatoshi Mizuno E<lt>lusheE<64>cpan.orgE<gt>
 #
-# $Id: AgreeAgent.pm 256 2008-02-14 21:07:38Z lushe $
+# $Id: AgreeAgent.pm 322 2008-04-17 12:33:58Z lushe $
 #
 use strict;
 use warnings;
 
-our $VERSION= '0.01';
+our $VERSION= '0.02';
 
 sub init_session {
 	my($self)= shift->next::method;
 	if (my $agent= $self->data->{user_agent}) {
-		return $self->_remake_session
-		       unless $agent eq $self->e->request->agent;
+		$agent eq $self->e->request->agent || return do {
+			$self->delete($self->session_id);
+			$self->_remake_session
+		  };
 	} else {
 		$self->data->{user_agent}= $self->e->request->agent;
 	}
